@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.1)
+cmake_minimum_required(VERSION 3.2)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(PROJECT_NAME jengine)
@@ -91,15 +91,15 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
 set(SPIRV_OUTPUT_DIR "${PROJECT_BINARY_DIR}/shaders")
 
 foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
-    get_filename_component(FILE_NAME_WITH_EXT "${GLSL_FILE}" NAME)
+    get_filename_component(FILE_NAME "${GLSL_FILE}" NAME)
     
-    set(SPIRV_FILE "${SPIRV_OUTPUT_DIR}/${FILE_NAME_WITH_EXT}.spv")
+    set(SPIRV_FILE "${SPIRV_OUTPUT_DIR}/${FILE_NAME}.spv")
     
     add_custom_command(
         OUTPUT ${SPIRV_FILE}
         COMMAND ${GLSL_VALIDATOR} -V ${GLSL_FILE} -o ${SPIRV_FILE}
         DEPENDS ${GLSL_FILE}
-        COMMENT "Compiling GLSL: ${FILE_NAME_WITH_EXT}"
+        COMMENT "Compiling GLSL: ${FILE_NAME}"
         VERBATIM
     )
     list(APPEND SPIRV_BINARY_FILES ${SPIRV_FILE})
