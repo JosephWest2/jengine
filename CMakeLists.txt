@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.1)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(PROJECT_NAME jengine)
@@ -53,7 +53,6 @@ add_library(${PROJECT_NAME}
     src/renderer/vulkan/device.cpp
     src/renderer/vulkan/surface.cpp
     src/renderer/vulkan/instance.cpp
-    src/renderer/vulkan/deletion_queue.cpp
     src/renderer/vulkan/memory_allocator.cpp
     src/renderer/three_dimensional.cpp
     src/engine.cpp
@@ -76,3 +75,37 @@ target_link_libraries(${PROJECT_NAME}
 add_executable(${PROJECT_NAME}_example example/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}_example PRIVATE src)
+
+find_program(GLSL_VALIDATOR glslangValidator)
+
+if(NOT GLSL_VALIDATOR)
+    message(FATAL_ERROR "glslangValidator not found. Please install the Vulkan SDK or ensure it's in your PATH.")
+endif()
+
+file(GLOB_RECURSE GLSL_SOURCE_FILES
+    "${PROJECT_SOURCE_DIR}/shaders/*.frag"
+    "${PROJECT_SOURCE_DIR}/shaders/*.vert"
+    "${PROJECT_SOURCE_DIR}/shaders/*.comp"
+)
+
+set(SPIRV_OUTPUT_DIR "${PROJECT_BINARY_DIR}/shaders")
+
+foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
+    get_filename_component(FILE_NAME_WITH_EXT "${GLSL_FILE}" NAME)
+    
+    set(SPIRV_FILE "${SPIRV_OUTPUT_DIR}/${FILE_NAME_WITH_EXT}.spv")
+    
+    add_custom_command(
+        OUTPUT ${SPIRV_FILE}
+        COMMAND ${GLSL_VALIDATOR} -V ${GLSL_FILE} -o ${SPIRV_FILE}
+        DEPENDS ${GLSL_FILE}
+        COMMENT "Compiling GLSL: ${FILE_NAME_WITH_EXT}"
+        VERBATIM
+    )
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV_FILE})
+endforeach()
+
+add_custom_target(
+    Shaders ALL
+    DEPENDS ${SPIRV_BINARY_FILES}
+)

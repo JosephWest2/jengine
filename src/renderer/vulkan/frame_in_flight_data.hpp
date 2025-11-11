@@ -15,40 +15,40 @@ struct FrameInFlightData {
     VkFence render_in_progress_fence;
 };
 
-template <size_t Size>
+template <size_t S>
 class FrameInFlightDataContainer {
   public:
     FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice device);
 
     FrameInFlightData& operator[](size_t index) { return frame_in_flight_data[index]; }
 
-    constexpr size_t size() const { return Size; }
+    constexpr size_t Size() const { return S; }
 
     // does not call device wait idle
     void Destroy(VkDevice device);
 
   private:
-    FrameInFlightData frame_in_flight_data[Size];
+    FrameInFlightData frame_in_flight_data[S];
 };
 
-template <size_t Size>
-FrameInFlightDataContainer<Size>::FrameInFlightDataContainer(uint32_t graphics_queue_family_index,
+template <size_t S>
+FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queue_family_index,
                                                                     VkDevice device) {
     VkCommandPoolCreateInfo command_pool_create_info =
-        InitCommandPoolCreateInfo(graphics_queue_family_index, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        init::CommandPoolCreateInfo(graphics_queue_family_index, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-    VkFenceCreateInfo fence_create_info = InitFenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkFenceCreateInfo fence_create_info = init::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
 
-    VkSemaphoreCreateInfo semaphore_create_info = InitSemaphoreCreateInfo(0);
+    VkSemaphoreCreateInfo semaphore_create_info = init::SemaphoreCreateInfo(0);
 
-    for (int i = 0; i < Size; i++) {
+    for (int i = 0; i < S; i++) {
         if (vkCreateCommandPool(device, &command_pool_create_info, nullptr, &frame_in_flight_data[i].command_pool) !=
             VK_SUCCESS) {
             throw std::runtime_error("Failed to create command pool");
         }
 
         VkCommandBufferAllocateInfo command_buffer_allocate_info =
-            vulkan::InitPrimaryCommandBufferAllocateInfo(frame_in_flight_data[i].command_pool, 1);
+            vulkan::init::PrimaryCommandBufferAllocateInfo(frame_in_flight_data[i].command_pool, 1);
 
         if (vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &frame_in_flight_data[i].command_buffer) !=
             VK_SUCCESS) {
@@ -67,8 +67,8 @@ FrameInFlightDataContainer<Size>::FrameInFlightDataContainer(uint32_t graphics_q
     }
 }
 
-template <size_t Size>
-void FrameInFlightDataContainer<Size>::Destroy(VkDevice device) {
+template <size_t S>
+void FrameInFlightDataContainer<S>::Destroy(VkDevice device) {
     std::cout << "Destroying frame in flight data" << std::endl;
     for (auto& frame_in_flight_data : frame_in_flight_data) {
         vkDestroyCommandPool(device, frame_in_flight_data.command_pool, nullptr);

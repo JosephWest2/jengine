@@ -14,6 +14,7 @@
 #include "renderer/vulkan/initializers.hpp"
 #include "renderer/vulkan/instance.hpp"
 #include "renderer/vulkan/physical_device.hpp"
+#include "window.hpp"
 
 namespace jengine::renderer {
 
@@ -22,15 +23,23 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, vulkan::Instance& instanc
       surface(window, instance.GetInstance()),
       physical_device(surface.GetSurface(), instance.VkbInstance()),
       device(physical_device.GetVkbPhysicalDevice()),
-      swapchain(window, physical_device.GetPhysicalDevice(), device.GetDevice(), surface.GetSurface()),
+      swapchain(GetWindowWidth(window),
+                GetWindowHeight(window),
+                physical_device.GetPhysicalDevice(),
+                device.GetDevice(),
+                surface.GetSurface()),
       graphics_queue(device.GetVkbDevice()),
-      frame_in_flight_data(graphics_queue.GetQueueFamilyIndex(), device.GetDevice()) {
-    std::cout << "swapchain.GetSwapchain(): " << swapchain.GetSwapchain() << std::endl;
-}
+      frame_in_flight_data(graphics_queue.GetQueueFamilyIndex(), device.GetDevice()),
+      allocator(instance.GetInstance(),
+                device.GetDevice(),
+                physical_device.GetPhysicalDevice(),
+                VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT),
+      draw_image(vulkan::CreateDrawImage(GetWindowWidth(window),
+                                         GetWindowHeight(window),
+                                         allocator.GetAllocator(),
+                                         device.GetDevice())) {}
 
-ThreeDimensional::~ThreeDimensional() {
-    Cleanup();
-}
+ThreeDimensional::~ThreeDimensional() { Destroy(); }
 
 void ThreeDimensional::DrawFrame() {
     std::cout << "Frame " << frame_counter << std::endl;
@@ -53,6 +62,9 @@ void ThreeDimensional::DrawFrame() {
                               &swapchain_image_index) != VK_SUCCESS) {
         throw std::runtime_error("Failed to acquire next swapchain image index");
     }
+
+    auto& swapchain_image = swapchain.GetSwapchainImages()[swapchain_image_index];
+
     VkCommandBuffer& command_buffer = GetCurrentFrameInFlightData().command_buffer;
 
     if (vkResetCommandBuffer(command_buffer, 0) != VK_SUCCESS) {
@@ -62,45 +74,39 @@ void ThreeDimensional::DrawFrame() {
     // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT means the command buffer will be used only for one submit per frame
     // (per reset) it allows vulkan to potentially optimize
     VkCommandBufferBeginInfo command_buffer_begin_info =
-        vulkan::InitCommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        vulkan::init::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     if (vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info) != VK_SUCCESS) {
         throw std::runtime_error("Failed to begin command buffer");
     }
 
-    vulkan::TransitionImage(command_buffer,
-                            swapchain.GetSwapchainImages()[swapchain_image_index],
-                            VK_IMAGE_LAYOUT_UNDEFINED,
-                            VK_IMAGE_LAYOUT_GENERAL);
+    DrawBackground(command_buffer);
 
-    auto clear_subresource_range = vulkan::InitImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    vulkan::TransitionImage(
+        command_buffer, draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vulkan::TransitionImage(
+        command_buffer, swapchain_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    float flash = std::abs(std::sin((float)frame_counter / 100.f));
-    VkClearColorValue clear_color = {0.0f, 0.0f, flash, 1.0f};
+    vulkan::CopyImageBlit(command_buffer,
+                          draw_image.image,
+                          swapchain_image,
+                          {draw_image.extent.width, draw_image.extent.height},
+                          swapchain.GetExtent());
 
-    vkCmdClearColorImage(command_buffer,
-                         swapchain.GetSwapchainImages()[swapchain_image_index],
-                         VK_IMAGE_LAYOUT_GENERAL,
-                         &clear_color,
-                         1,
-                         &clear_subresource_range);
-
-    vulkan::TransitionImage(command_buffer,
-                            swapchain.GetSwapchainImages()[swapchain_image_index],
-                            VK_IMAGE_LAYOUT_GENERAL,
-                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    vulkan::TransitionImage(
+        command_buffer, swapchain_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to end command buffer");
     }
 
-    VkCommandBufferSubmitInfo command_buffer_submit_info = vulkan::InitCommandBufferSubmitInfo(command_buffer);
-    VkSemaphoreSubmitInfo wait_semaphore_submit_info = vulkan::InitSemaphoreSubmitInfo(
+    VkCommandBufferSubmitInfo command_buffer_submit_info = vulkan::init::CommandBufferSubmitInfo(command_buffer);
+    VkSemaphoreSubmitInfo wait_semaphore_submit_info = vulkan::init::SemaphoreSubmitInfo(
         GetCurrentFrameInFlightData().image_available_semaphore, VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT);
     VkSemaphoreSubmitInfo signal_semaphore_submit_info =
-        vulkan::InitSemaphoreSubmitInfo(swapchain.GetImageRenderFinishedSemaphores()[swapchain_image_index],
-                                        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
-    VkSubmitInfo2 submit_info = vulkan::InitSubmitInfo2(
+        vulkan::init::SemaphoreSubmitInfo(swapchain.GetImageRenderFinishedSemaphores()[swapchain_image_index],
+                                          VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
+    VkSubmitInfo2 submit_info = vulkan::init::SubmitInfo2(
         &command_buffer_submit_info, &wait_semaphore_submit_info, &signal_semaphore_submit_info);
 
     if (vkQueueSubmit2(
@@ -129,12 +135,24 @@ void ThreeDimensional::DrawFrame() {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
-void ThreeDimensional::Cleanup() {
+void ThreeDimensional::Destroy() {
     vkDeviceWaitIdle(device.GetDevice());
+    draw_image.Destroy(device.GetDevice(), allocator.GetAllocator());
+    allocator.Destroy();
     frame_in_flight_data.Destroy(device.GetDevice());
-    deletion_queue.Flush();
     swapchain.Destroy(device.GetDevice());
     device.Destroy();
     surface.Destroy(instance.GetInstance());
+}
+void ThreeDimensional::DrawBackground(VkCommandBuffer command_buffer) {
+    vulkan::TransitionImage(command_buffer, draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    auto clear_subresource_range = vulkan::init::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    float flash = std::abs(std::sin((float)frame_counter / 100.f));
+    VkClearColorValue clear_color = {0.0f, 0.0f, flash, 1.0f};
+
+    vkCmdClearColorImage(
+        command_buffer, draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &clear_subresource_range);
 }
 }  // namespace jengine::renderer

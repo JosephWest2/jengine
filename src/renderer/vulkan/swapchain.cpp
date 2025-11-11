@@ -35,10 +35,11 @@ Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, 
     }
 
     swapchain = swapchain_res->swapchain;
+    extent = swapchain_res->extent;
     swapchain_images = swapchain_res->get_images().value();
     swapchain_image_views = swapchain_res->get_image_views().value();
 
-    VkSemaphoreCreateInfo semaphore_create_info = vulkan::InitSemaphoreCreateInfo(0);
+    VkSemaphoreCreateInfo semaphore_create_info = vulkan::init::SemaphoreCreateInfo(0);
     image_render_finished_semaphores.resize(swapchain_images.size());
 
     for (int i = 0; i < swapchain_images.size(); i++) {
@@ -64,11 +65,5 @@ void Swapchain::Destroy(VkDevice device) {
         vkDestroySemaphore(device, image_semaphore, nullptr);
     }
     vkDestroySwapchainKHR(device, swapchain, nullptr);
-}
-
-Swapchain::Swapchain(SDL_Window* window, VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface) {
-    int w, h;
-    SDL_GetWindowSize(window, &w, &h);
-    *this = Swapchain(w, h, physical_device, device, surface);
 }
 }  // namespace jengine::renderer::vulkan

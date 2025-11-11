@@ -49,4 +49,19 @@ void Window::DrawFrame() {
     renderer->DrawFrame();
 }
 void Window::SetRenderer(renderer::Base* renderer) { this->renderer = renderer; }
+int GetWindowHeight(SDL_Window* window) {
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    return height;
+}
+int GetWindowWidth(SDL_Window* window) {
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    return width;
+}
+std::pair<int, int> GetWindowSize(SDL_Window* window) {
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    return {width, height};
+}
 }  // namespace jengine

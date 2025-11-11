@@ -1,8 +1,8 @@
 #include "initializers.hpp"
 #include <vulkan/vulkan_core.h>
-namespace jengine::renderer::vulkan {
+namespace jengine::renderer::vulkan::init {
 
-VkCommandPoolCreateInfo InitCommandPoolCreateInfo(uint32_t graphics_queue_family_index,
+VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t graphics_queue_family_index,
                                                                                VkCommandPoolCreateFlags flags) {
     VkCommandPoolCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -12,7 +12,7 @@ VkCommandPoolCreateInfo InitCommandPoolCreateInfo(uint32_t graphics_queue_family
     return create_info;
 }
 
-VkCommandBufferAllocateInfo InitPrimaryCommandBufferAllocateInfo(
+VkCommandBufferAllocateInfo PrimaryCommandBufferAllocateInfo(
     VkCommandPool pool,
     uint32_t count) {
     VkCommandBufferAllocateInfo alloc_info = {};
@@ -24,7 +24,7 @@ VkCommandBufferAllocateInfo InitPrimaryCommandBufferAllocateInfo(
     return alloc_info;
 }
 
-VkFenceCreateInfo InitFenceCreateInfo(VkFenceCreateFlags flags) {
+VkFenceCreateInfo FenceCreateInfo(VkFenceCreateFlags flags) {
     VkFenceCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     create_info.pNext = nullptr;
@@ -32,14 +32,14 @@ VkFenceCreateInfo InitFenceCreateInfo(VkFenceCreateFlags flags) {
     return create_info;
 }
 
-VkSemaphoreCreateInfo InitSemaphoreCreateInfo(VkSemaphoreCreateFlags flags) {
+VkSemaphoreCreateInfo SemaphoreCreateInfo(VkSemaphoreCreateFlags flags) {
     VkSemaphoreCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     create_info.pNext = nullptr;
     create_info.flags = flags;
     return create_info;
 }
-VkCommandBufferBeginInfo InitCommandBufferBeginInfo(VkCommandBufferUsageFlags usage_flags) {
+VkCommandBufferBeginInfo CommandBufferBeginInfo(VkCommandBufferUsageFlags usage_flags) {
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.pNext = nullptr;
@@ -47,7 +47,7 @@ VkCommandBufferBeginInfo InitCommandBufferBeginInfo(VkCommandBufferUsageFlags us
     begin_info.flags = usage_flags;
     return begin_info;
 }
-VkImageSubresourceRange InitImageSubresourceRange(VkImageAspectFlags aspect_mask) {
+VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspect_mask) {
     VkImageSubresourceRange subresource_range = {};
     subresource_range.aspectMask = aspect_mask;
     subresource_range.baseMipLevel = 0;
@@ -57,7 +57,7 @@ VkImageSubresourceRange InitImageSubresourceRange(VkImageAspectFlags aspect_mask
     return subresource_range;
 
 }
-VkSemaphoreSubmitInfo InitSemaphoreSubmitInfo(VkSemaphore semaphore, VkPipelineStageFlags stage_flags) {
+VkSemaphoreSubmitInfo SemaphoreSubmitInfo(VkSemaphore semaphore, VkPipelineStageFlags stage_flags) {
     VkSemaphoreSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     submit_info.pNext = nullptr;
@@ -67,7 +67,7 @@ VkSemaphoreSubmitInfo InitSemaphoreSubmitInfo(VkSemaphore semaphore, VkPipelineS
     submit_info.value = 0;
     return submit_info;
 }
-VkCommandBufferSubmitInfo InitCommandBufferSubmitInfo(VkCommandBuffer command_buffer) {
+VkCommandBufferSubmitInfo CommandBufferSubmitInfo(VkCommandBuffer command_buffer) {
     VkCommandBufferSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
     submit_info.pNext = nullptr;
@@ -75,7 +75,7 @@ VkCommandBufferSubmitInfo InitCommandBufferSubmitInfo(VkCommandBuffer command_bu
     submit_info.deviceMask = 0;
     return submit_info;
 }
-VkSubmitInfo2 InitSubmitInfo2(VkCommandBufferSubmitInfo* command_buffer_submit_info,
+VkSubmitInfo2 SubmitInfo2(VkCommandBufferSubmitInfo* command_buffer_submit_info,
                               VkSemaphoreSubmitInfo* wait_semaphore_submit_info,
                               VkSemaphoreSubmitInfo* signal_semaphore_submit_info) {
     VkSubmitInfo2 submit_info = {};
@@ -92,5 +92,39 @@ VkSubmitInfo2 InitSubmitInfo2(VkCommandBufferSubmitInfo* command_buffer_submit_i
     submit_info.pWaitSemaphoreInfos = wait_semaphore_submit_info;
 
     return submit_info;
+}
+VkImageCreateInfo ImageCreateInfo(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent) {
+    VkImageCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    create_info.pNext = nullptr;
+    create_info.imageType = VK_IMAGE_TYPE_2D;
+
+    create_info.format = format;
+    create_info.extent = extent;
+
+    create_info.mipLevels = 1;
+    create_info.arrayLayers = 1;
+
+    create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    create_info.usage = usage_flags;
+
+    // for MSAA
+    create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    return create_info;
+}
+VkImageViewCreateInfo ImageViewCreateInfo(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags) {
+    VkImageViewCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    create_info.pNext = nullptr;
+    create_info.image = image;
+    create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    create_info.format = format;
+    create_info.subresourceRange.aspectMask = aspect_flags;
+    create_info.subresourceRange.levelCount = 1;
+    create_info.subresourceRange.layerCount = 1;
+    create_info.subresourceRange.baseArrayLayer = 0;
+    create_info.subresourceRange.baseMipLevel = 0;
+    return create_info;
 }
 }  // namespace jengine::renderer::vulkan

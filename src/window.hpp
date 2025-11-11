@@ -1,9 +1,15 @@
 #pragma once
 
+#include <utility>
 #include "SDL3/SDL_video.h"
 #include "renderer/base.hpp"
 
 namespace jengine {
+
+// returns {width, height}
+std::pair<int, int> GetWindowSize(SDL_Window* window);
+int GetWindowWidth(SDL_Window* window);
+int GetWindowHeight(SDL_Window* window);
 
 enum class WindowType {
     VULKAN,
