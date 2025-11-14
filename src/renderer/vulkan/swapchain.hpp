@@ -14,6 +14,7 @@ class Swapchain {
     void Destroy(VkDevice device);
 
     VkFormat GetSwapchainImageFormat() const { return swapchain_image_format; }
+    VkFormat* GetSwapchainImageFormatPtr() { return &swapchain_image_format; }
     VkSwapchainKHR GetSwapchain() const { return swapchain; }
     VkSwapchainKHR* GetSwapchainPtr() { return &swapchain; }
     const std::vector<VkSemaphore>& GetImageRenderFinishedSemaphores() const {

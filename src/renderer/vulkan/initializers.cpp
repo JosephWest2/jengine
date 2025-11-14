@@ -127,4 +127,17 @@ VkImageViewCreateInfo ImageViewCreateInfo(VkImage image, VkFormat format, VkImag
     create_info.subresourceRange.baseMipLevel = 0;
     return create_info;
 }
-}  // namespace jengine::renderer::vulkan
+VkRenderingAttachmentInfo RenderingAttachmentInfo(VkImageView image_view,
+                                                  std::optional<VkClearValue> clear_value,
+                                                  VkImageLayout image_layout) {
+    VkRenderingAttachmentInfo attachment_info = {};
+    attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    attachment_info.pNext = nullptr;
+    attachment_info.imageView = image_view;
+    attachment_info.imageLayout = image_layout;
+    attachment_info.loadOp = clear_value ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_info.clearValue = clear_value ? clear_value.value() : VkClearValue();
+    return attachment_info;
+}
+}  // namespace jengine::renderer::vulkan::init

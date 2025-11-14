@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(PROJECT_NAME jengine)
@@ -35,12 +35,35 @@ FetchContent_Declare(
     URL https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz
     URL_HASH SHA256=c4f6bbe6b5a45c2eb610ca9d231158e313086d5b1a40c9922cb42b597419b14e
 )
+FetchContent_Declare(
+    imgui
+    URL https://github.com/ocornut/imgui/archive/refs/tags/v1.92.4.tar.gz
+    URL_HASH SHA256=0e175d4d941112532549b418ced0bd546abe9024ecb9b5f431f8a67a2197b0ba
+)
 
 FetchContent_MakeAvailable(
     sdl3
     vkbootstrap
     abseil
     vma
+    imgui
+)
+
+add_library(imgui_static STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+)
+
+target_include_directories(imgui_static
+    PUBLIC ${imgui_SOURCE_DIR}
+    PUBLIC ${imgui_SOURCE_DIR}/backends
 )
 
 add_library(${PROJECT_NAME} 
@@ -55,6 +78,8 @@ add_library(${PROJECT_NAME}
     src/renderer/vulkan/instance.cpp
     src/renderer/vulkan/memory_allocator.cpp
     src/renderer/three_dimensional.cpp
+    src/renderer/vulkan/pipelines.cpp
+    src/renderer/vulkan/descriptors.cpp
     src/engine.cpp
     src/window.cpp
 )
@@ -70,12 +95,14 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC vk-bootstrap::vk-bootstrap
     PUBLIC absl::flat_hash_map
     PUBLIC VulkanMemoryAllocator
+    PUBLIC imgui_static
 )
 
 add_executable(${PROJECT_NAME}_example example/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}_example PRIVATE src)
 
+# Compile shaders, requires reconfiguring cmake if new files are added
 find_program(GLSL_VALIDATOR glslangValidator)
 
 if(NOT GLSL_VALIDATOR)

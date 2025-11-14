@@ -34,9 +34,13 @@ void Engine::HandleEvent(SDL_Event& event) {
         case SDL_EVENT_QUIT:
             quit = true;
             break;
+        case SDL_EVENT_WINDOW_MINIMIZED:
+            CallOnWindowByWindowID(event.window, &Window::HandleWindowMinimized);
+            break;
         default:
             break;
     }
+
 }
 
 Engine::Engine(bool headless) {

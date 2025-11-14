@@ -48,10 +48,6 @@ Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, 
             throw std::runtime_error("Failed to create render finished semaphore");
         }
     }
-
-    std::cout << "Created swapchain with " << swapchain_images.size() << " images" << std::endl;
-    std::cout << "GetSwapchain: " << GetSwapchain() << std::endl;
-
 };
 
 void Swapchain::Destroy(VkDevice device) {

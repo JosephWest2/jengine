@@ -1,5 +1,6 @@
 #include "window.hpp"
 
+#include <cassert>
 #include <format>
 #include <stdexcept>
 #include <unordered_map>
@@ -63,5 +64,8 @@ std::pair<int, int> GetWindowSize(SDL_Window* window) {
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     return {width, height};
+}
+void Window::HandleWindowMinimized(SDL_WindowEvent& event) {
+
 }
 }  // namespace jengine
