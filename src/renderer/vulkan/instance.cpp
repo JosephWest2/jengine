@@ -14,7 +14,7 @@ Instance::Instance(const char* app_name, bool use_validation_layers) {
     vkb::InstanceBuilder instance_builder;
 
     auto res = instance_builder
-        .set_app_name("jengine")
+        .set_app_name(app_name)
         .request_validation_layers(use_validation_layers)
         .use_default_debug_messenger()
         .require_api_version(1, 3, 0)

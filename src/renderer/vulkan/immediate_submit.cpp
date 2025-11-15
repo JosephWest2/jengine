@@ -4,12 +4,13 @@
 
 #include <stdexcept>
 
+#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/initializers.hpp"
 
 namespace jengine::renderer::vulkan {
 ImmediateSubmit::ImmediateSubmit(VkDevice device,
                                  uint32_t graphics_queue_family_index,
-                                 std::stack<std::function<void()>>& deletion_stack) {
+                                 DeletionStack& deletion_stack) {
     VkCommandPoolCreateInfo command_pool_create_info =
         init::CommandPoolCreateInfo(graphics_queue_family_index, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     if (vkCreateCommandPool(device, &command_pool_create_info, nullptr, &command_pool) != VK_SUCCESS) {
@@ -26,7 +27,7 @@ ImmediateSubmit::ImmediateSubmit(VkDevice device,
         throw std::runtime_error("Failed to create immediate submit fence");
     }
 
-    deletion_stack.push([this, device]() { Destroy(device); });
+    deletion_stack.Push([this, device]() { Destroy(device); });
 };
 void ImmediateSubmit::Destroy(VkDevice device) {
     vkDestroyCommandPool(device, command_pool, nullptr);

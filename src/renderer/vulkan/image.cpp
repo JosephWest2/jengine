@@ -38,7 +38,7 @@ void TransitionImage(VkCommandBuffer command_buffer,
 
     vkCmdPipelineBarrier2(command_buffer, &dependency_info);
 }
-AllocatedImage CreateDrawImage(uint width, uint height, VmaAllocator allocator, VkDevice device) {
+AllocatedImage CreateDrawImage(uint width, uint height, VmaAllocator allocator, VkDevice device, DeletionStack& deletion_stack) {
     AllocatedImage result = {
         .extent = {.width = width, .height = height, .depth = 1},
         .format = VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -68,6 +68,11 @@ AllocatedImage CreateDrawImage(uint width, uint height, VmaAllocator allocator, 
     if (vkCreateImageView(device, &image_view_create_info, nullptr, &result.image_view) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create draw image view");
     }
+
+    deletion_stack.Push([device, allocator, result]() {
+        vkDestroyImageView(device, result.image_view, nullptr);
+        vmaDestroyImage(allocator, result.image, result.allocation);
+    });
 
     return result;
 }

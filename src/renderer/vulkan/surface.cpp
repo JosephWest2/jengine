@@ -4,11 +4,11 @@
 #include <iostream>
 
 #include "SDL3/SDL_vulkan.h"
-#include "deletion_stack.hpp"
+#include "renderer/vulkan/deletion_stack.hpp"
 
 namespace jengine::renderer::vulkan {
 
-Surface::Surface(SDL_Window* window, VkInstance instance, DeletionStack deletion_stack) {
+Surface::Surface(SDL_Window* window, VkInstance instance, DeletionStack& deletion_stack) {
     if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface)) {
         throw std::runtime_error(std::format("SDL_Vulkan_CreateSurface failed: {}", SDL_GetError()));
     }

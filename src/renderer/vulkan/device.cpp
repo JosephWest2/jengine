@@ -2,10 +2,11 @@
 
 #include <format>
 #include <iostream>
+#include "renderer/vulkan/deletion_stack.hpp"
 
 namespace jengine::renderer::vulkan {
 
-Device::Device(vkb::PhysicalDevice& physical_device) {
+Device::Device(vkb::PhysicalDevice& physical_device, DeletionStack& deletion_stack) {
     vkb::DeviceBuilder device_builder(physical_device);
 
     auto device_res = device_builder.build();
@@ -14,6 +15,8 @@ Device::Device(vkb::PhysicalDevice& physical_device) {
     }
 
     vkb_device = device_res.value();
+
+    deletion_stack.Push([this]() { Destroy(); });
 }
 
 void Device::Destroy() {

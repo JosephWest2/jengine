@@ -28,7 +28,8 @@ Window::~Window() {
     }
 }
 
-Window::Window(Window&& other) : renderer(other.renderer), window(other.window), constant_redraw(other.constant_redraw) {
+Window::Window(Window&& other)
+    : renderer(other.renderer), window(other.window), constant_redraw(other.constant_redraw) {
     other.window = nullptr;
     other.renderer = nullptr;
 }
@@ -65,7 +66,5 @@ std::pair<int, int> GetWindowSize(SDL_Window* window) {
     SDL_GetWindowSize(window, &width, &height);
     return {width, height};
 }
-void Window::HandleWindowMinimized(SDL_WindowEvent& event) {
-
-}
+void Window::HandleWindowMinimized(SDL_WindowEvent& event __attribute__((unused))) {}
 }  // namespace jengine

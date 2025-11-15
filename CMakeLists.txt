@@ -66,36 +66,52 @@ target_include_directories(imgui_static
     PUBLIC ${imgui_SOURCE_DIR}/backends
 )
 
+add_library(vma_impl STATIC vma_impl/vma_impl.cpp)
+
+target_link_libraries(vma_impl PUBLIC VulkanMemoryAllocator)
+
 add_library(${PROJECT_NAME} 
     src/renderer/two_dimensional.cpp
-    src/renderer/vulkan/initializers.cpp
     src/renderer/vulkan/graphics_queue.cpp
-    src/renderer/vulkan/image.cpp
     src/renderer/vulkan/physical_device.cpp
+    src/renderer/vulkan/instance.cpp
+    src/renderer/vulkan/initializers.cpp
+    src/renderer/vulkan/compute_queue.cpp
+    src/renderer/vulkan/image.cpp
+    src/renderer/vulkan/descriptors/allocator.cpp
+    src/renderer/vulkan/descriptors/layout_builder.cpp
+    src/renderer/vulkan/descriptors/draw_image_descriptors.cpp
+    src/renderer/vulkan/descriptors/manager.cpp
+    src/renderer/vulkan/pipelines/load_shader_module.cpp
+    src/renderer/vulkan/pipelines/gradient_pipeline.cpp
+    src/renderer/vulkan/pipelines/manager.cpp
+    src/renderer/vulkan/surface.cpp
+    src/renderer/vulkan/deletion_stack.cpp
     src/renderer/vulkan/swapchain.cpp
     src/renderer/vulkan/device.cpp
-    src/renderer/vulkan/surface.cpp
-    src/renderer/vulkan/instance.cpp
     src/renderer/vulkan/memory_allocator.cpp
+    src/renderer/vulkan/immediate_submit.cpp
+    src/renderer/imgui/context.cpp
     src/renderer/three_dimensional.cpp
-    src/renderer/vulkan/pipelines.cpp
-    src/renderer/vulkan/descriptors.cpp
-    src/engine.cpp
     src/window.cpp
+    src/engine.cpp
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_include_directories(${PROJECT_NAME}
-    PRIVATE src
-)
+target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 target_link_libraries(${PROJECT_NAME}
+    PUBLIC vma_impl
     PUBLIC Vulkan::Vulkan
     PUBLIC SDL3::SDL3
     PUBLIC vk-bootstrap::vk-bootstrap
     PUBLIC absl::flat_hash_map
-    PUBLIC VulkanMemoryAllocator
     PUBLIC imgui_static
+)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+  $<$<CXX_COMPILER_ID:MSVC>:/W4>
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror>
 )
 
 add_executable(${PROJECT_NAME}_example example/main.cpp)

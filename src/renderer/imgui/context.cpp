@@ -15,7 +15,7 @@ Context::Context(SDL_Window* window,
                  VkQueue queue,
                  uint32_t queue_family_index,
                  VkFormat* swapchain_format_ptr,
-                 std::stack<std::function<void()>>& deletion_stack) {
+                 DeletionStack& deletion_stack) {
     VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 100},
                                          {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100},
                                          {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 100},
@@ -71,14 +71,14 @@ Context::Context(SDL_Window* window,
 
     SDL_SetEventFilter(&Context::EventFilter, nullptr);
 
-    deletion_stack.push([this, device, imgui_descriptor_pool]() {
+    deletion_stack.Push([device, imgui_descriptor_pool]() {
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplSDL3_Shutdown();
         ImGui::DestroyContext();
         vkDestroyDescriptorPool(device, imgui_descriptor_pool, nullptr);
     });
 }
-bool Context::EventFilter(void* user_data, SDL_Event* event) {
+bool Context::EventFilter(void* user_data __attribute__((unused)), SDL_Event* event) {
     ImGui_ImplSDL3_ProcessEvent(event);
     ImGuiIO& io = ImGui::GetIO();
     if (io.WantCaptureMouse || io.WantCaptureKeyboard) {
@@ -89,5 +89,12 @@ bool Context::EventFilter(void* user_data, SDL_Event* event) {
         }
     }
     return true;
+}
+void Context::NewFrame() {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow();
+    ImGui::Render();
 }
 }  // namespace jengine::renderer::imgui

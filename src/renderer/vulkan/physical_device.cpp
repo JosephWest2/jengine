@@ -1,21 +1,22 @@
 #include "physical_device.hpp"
-#include "VkBootstrap.h"
+
 #include <format>
+
+#include "VkBootstrap.h"
 
 namespace jengine::renderer::vulkan {
 
 PhysicalDevice::PhysicalDevice(VkSurfaceKHR surface, vkb::Instance& instance) {
 
-    VkPhysicalDeviceVulkan13Features vulkan_1_3_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .synchronization2 = true,
-        .dynamicRendering = true,
-    };
-    VkPhysicalDeviceVulkan12Features vulkan_1_2_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-        .descriptorIndexing = true,
-        .bufferDeviceAddress = true,
-    };
+    VkPhysicalDeviceVulkan13Features vulkan_1_3_features = {};
+    vulkan_1_3_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    vulkan_1_3_features.synchronization2 = true;
+    vulkan_1_3_features.dynamicRendering = true;
+
+    VkPhysicalDeviceVulkan12Features vulkan_1_2_features = {};
+    vulkan_1_2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    vulkan_1_2_features.descriptorIndexing = true;
+    vulkan_1_2_features.bufferDeviceAddress = true;
 
     vkb::PhysicalDeviceSelector physical_device_selector(instance, surface);
 
@@ -29,6 +30,5 @@ PhysicalDevice::PhysicalDevice(VkSurfaceKHR surface, vkb::Instance& instance) {
             std::format("Failed to select Vulkan physical device: {}", physical_device_res.error().message()));
     }
     vkb_physical_device = physical_device_res.value();
-
 }
 }  // namespace jengine::renderer::vulkan

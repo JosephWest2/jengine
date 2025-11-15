@@ -2,11 +2,9 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <functional>
-#include <stack>
-
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_video.h"
+#include "renderer/vulkan/deletion_stack.hpp"
 
 namespace jengine::renderer::imgui {
 class Context {
@@ -18,7 +16,9 @@ class Context {
             VkQueue queue,
             uint32_t queue_family_index,
             VkFormat* swapchain_format_ptr,
-            std::stack<std::function<void()>>& deletion_stack);
+            DeletionStack& deletion_stack);
+    void NewFrame();
+
   private:
     static bool EventFilter(void* user_data, SDL_Event* event);
 };

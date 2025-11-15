@@ -4,11 +4,12 @@
 #include <vulkan/vulkan_core.h>
 
 #include <vector>
+#include "renderer/vulkan/deletion_stack.hpp"
 namespace jengine::renderer::vulkan {
 
 class Swapchain {
   public:
-    Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface);
+    Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, DeletionStack& deletion_stack);
 
     // does not call device wait idle
     void Destroy(VkDevice device);

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/initializers.hpp"
 
 namespace jengine::renderer::vulkan {
@@ -18,7 +19,7 @@ struct FrameInFlightData {
 template <size_t S>
 class FrameInFlightDataContainer {
   public:
-    FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice device);
+    FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice device, DeletionStack& deletion_stack);
 
     FrameInFlightData& operator[](size_t index) { return frame_in_flight_data[index]; }
 
@@ -33,7 +34,8 @@ class FrameInFlightDataContainer {
 
 template <size_t S>
 FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queue_family_index,
-                                                                    VkDevice device) {
+                                                          VkDevice device,
+                                                          DeletionStack& deletion_stack) {
     VkCommandPoolCreateInfo command_pool_create_info =
         init::CommandPoolCreateInfo(graphics_queue_family_index, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
@@ -41,7 +43,7 @@ FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queu
 
     VkSemaphoreCreateInfo semaphore_create_info = init::SemaphoreCreateInfo(0);
 
-    for (int i = 0; i < S; i++) {
+    for (size_t i = 0; i < S; i++) {
         if (vkCreateCommandPool(device, &command_pool_create_info, nullptr, &frame_in_flight_data[i].command_pool) !=
             VK_SUCCESS) {
             throw std::runtime_error("Failed to create command pool");
@@ -65,6 +67,8 @@ FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queu
             throw std::runtime_error("Failed to create render in process fence");
         }
     }
+
+    deletion_stack.Push([this, device]() { Destroy(device); });
 }
 
 template <size_t S>

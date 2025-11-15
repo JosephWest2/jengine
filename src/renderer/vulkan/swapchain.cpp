@@ -3,12 +3,13 @@
 #include <iostream>
 #include <stdexcept>
 #include "VkBootstrap.h"
+#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/initializers.hpp"
 
 namespace jengine::renderer::vulkan {
 
 
-Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface) {
+Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, DeletionStack& deletion_stack) {
     if (!physical_device) {
         throw std::runtime_error("Physical device is null");
     }
@@ -42,12 +43,14 @@ Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, 
     VkSemaphoreCreateInfo semaphore_create_info = vulkan::init::SemaphoreCreateInfo(0);
     image_render_finished_semaphores.resize(swapchain_images.size());
 
-    for (int i = 0; i < swapchain_images.size(); i++) {
+    for (size_t i = 0; i < swapchain_images.size(); i++) {
         if (vkCreateSemaphore(device, &semaphore_create_info, nullptr, &image_render_finished_semaphores[i]) !=
             VK_SUCCESS) {
             throw std::runtime_error("Failed to create render finished semaphore");
         }
     }
+
+    deletion_stack.Push([this, device]() { Destroy(device); });
 };
 
 void Swapchain::Destroy(VkDevice device) {

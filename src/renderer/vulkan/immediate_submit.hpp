@@ -3,10 +3,11 @@
 #include <vulkan/vulkan_core.h>
 #include <functional>
 #include <stack>
+#include "renderer/vulkan/deletion_stack.hpp"
 namespace jengine::renderer::vulkan {
 class ImmediateSubmit {
   public:
-    ImmediateSubmit(VkDevice device, uint32_t graphics_queue_family_index, std::stack<std::function<void()>>& deletion_stack);
+    ImmediateSubmit(VkDevice device, uint32_t graphics_queue_family_index, DeletionStack& deletion_stack);
 
     void Destroy(VkDevice device);
 
