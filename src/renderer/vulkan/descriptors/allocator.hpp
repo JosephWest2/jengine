@@ -1,8 +1,10 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
+
 #include <initializer_list>
-#include "renderer/vulkan/deletion_stack.hpp"
+#include <span>
+
 namespace jengine::renderer::vulkan::descriptors {
 class DescriptorAllocator {
   public:
@@ -11,20 +13,19 @@ class DescriptorAllocator {
         float ratio{};
     };
 
+    DescriptorAllocator(VkDevice& device, uint32_t max_sets, std::initializer_list<PoolSizeRatio> pool_size_ratios);
+    ~DescriptorAllocator();
 
-    DescriptorAllocator(VkDevice device,
-                        uint32_t max_sets,
-                        std::initializer_list<PoolSizeRatio> pool_size_ratios,
-                        DeletionStack& deletion_stack);
+    void InitPool(uint32_t max_sets, const std::span<PoolSizeRatio> pool_size_ratios);
+    void ClearDescriptors();
 
-    void InitPool(VkDevice device, uint32_t max_sets, const std::span<PoolSizeRatio> pool_size_ratios);
-    void ClearDescriptors(VkDevice device);
-    void Destroy(VkDevice device);
-
-    VkDescriptorSet Allocate(VkDevice device, VkDescriptorSetLayout layout);
+    VkDescriptorSet Allocate(VkDescriptorSetLayout layout);
 
   private:
     bool initialized = false;
     VkDescriptorPool pool{};
+
+    // held for destruction
+    VkDevice& device;
 };
-}
+}  // namespace jengine::renderer::vulkan::descriptors

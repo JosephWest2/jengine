@@ -40,6 +40,11 @@ FetchContent_Declare(
     URL https://github.com/ocornut/imgui/archive/refs/tags/v1.92.4.tar.gz
     URL_HASH SHA256=0e175d4d941112532549b418ced0bd546abe9024ecb9b5f431f8a67a2197b0ba
 )
+FetchContent_Declare(
+    glm
+    URL https://github.com/g-truc/glm/archive/refs/tags/1.0.2.tar.gz
+    URL_HASH SHA256=19edf2e860297efab1c74950e6076bf4dad9de483826bc95e2e0f2c758a43f65
+)
 
 FetchContent_MakeAvailable(
     sdl3
@@ -47,6 +52,7 @@ FetchContent_MakeAvailable(
     abseil
     vma
     imgui
+    glm
 )
 
 add_library(imgui_static STATIC
@@ -107,6 +113,7 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC vk-bootstrap::vk-bootstrap
     PUBLIC absl::flat_hash_map
     PUBLIC imgui_static
+    PUBLIC glm::glm
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE
@@ -118,7 +125,7 @@ add_executable(${PROJECT_NAME}_example example/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}_example PRIVATE src)
 
-# Compile shaders, requires reconfiguring cmake if new files are added
+# Compile shaders, requires reconfiguring cmake if new shader files are added
 find_program(GLSL_VALIDATOR glslangValidator)
 
 if(NOT GLSL_VALIDATOR)

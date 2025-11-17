@@ -42,13 +42,10 @@ Instance& Instance::operator=(Instance&& other) {
     return *this;
 }
 Instance::~Instance() {
-    Destroy();
-};
-void Instance::Destroy() {
     if (vulkan_initialized) {
         std::cout << "Destroying Vulkan instance" << std::endl;
         vkb::destroy_instance(vkb_instance);
         vulkan_initialized = false;
     }
-}
+};
 }  // namespace jengine::renderer::vulkan

@@ -2,12 +2,12 @@
 
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
+
 #include <functional>
+
 #include "SDL3/SDL_video.h"
-#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/base.hpp"
 #include "renderer/imgui/context.hpp"
-#include "renderer/vulkan/compute_queue.hpp"
 #include "renderer/vulkan/descriptors/manager.hpp"
 #include "renderer/vulkan/device.hpp"
 #include "renderer/vulkan/frame_in_flight_data.hpp"
@@ -23,7 +23,6 @@
 
 namespace jengine::renderer {
 
-
 class ThreeDimensional : public Base {
   public:
     ThreeDimensional(SDL_Window* window, vulkan::Instance& instance);
@@ -35,13 +34,11 @@ class ThreeDimensional : public Base {
     void DrawFrame() override;
 
   private:
-
     uint64_t frame_counter{0};
 
     static constexpr int FRAMES_IN_FLIGHT = 3;
 
     // instance must outlive the renderer
-    DeletionStack deletion_stack;
     vulkan::Instance& instance;
 
     vulkan::Surface surface;
@@ -51,7 +48,7 @@ class ThreeDimensional : public Base {
     vulkan::GraphicsQueue graphics_queue;
     vulkan::FrameInFlightDataContainer<3> frame_in_flight_data;
 
-    vulkan::ComputeQueue compute_queue;
+    vulkan::GraphicsQueue graphics_queue_2;
     vulkan::ImmediateSubmit immediate_submit;
 
     vulkan::MemoryAllocator allocator;
@@ -66,11 +63,9 @@ class ThreeDimensional : public Base {
 
     void ImmediateSubmit(std::function<void(VkCommandBuffer command_buffer)>&& function);
 
-    void Destroy();
     void DrawBackground(VkCommandBuffer command_buffer);
 
     vulkan::FrameInFlightData& GetCurrentFrameInFlightData();
-
 };
 
 }  // namespace jengine::renderer

@@ -8,7 +8,7 @@
 namespace jengine::renderer::vulkan::descriptors {
 class Manager {
   public:
-    Manager(VkDevice device, VkImageView draw_image_view, DeletionStack& deletion_stack);
+    Manager(VkDevice& device, VkImageView draw_image_view);
     VkDescriptorSet* GetDrawImageDescriptorSetPtr() { return draw_image_descriptors.GetDescriptorSetPtr(); }
     VkDescriptorSetLayout* GetDrawImageDescriptorLayoutPtr() { return draw_image_descriptors.GetLayoutPtr(); }
 

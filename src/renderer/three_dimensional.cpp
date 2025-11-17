@@ -9,54 +9,52 @@
 #include <iostream>
 #include <thread>
 
-#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/graphics_queue.hpp"
 #include "renderer/vulkan/image.hpp"
 #include "renderer/vulkan/immediate_submit.hpp"
 #include "renderer/vulkan/initializers.hpp"
 #include "renderer/vulkan/instance.hpp"
 #include "renderer/vulkan/physical_device.hpp"
+#include "renderer/vulkan/pipelines/gradient_pipeline.hpp"
 #include "window.hpp"
 
 namespace jengine::renderer {
 
 ThreeDimensional::ThreeDimensional(SDL_Window* window, vulkan::Instance& instance)
     : instance(instance),
-      surface(window, instance.GetInstance(), deletion_stack),
+      surface(window, instance.GetInstance()),
       physical_device(surface.GetSurface(), instance.VkbInstance()),
-      device(physical_device.GetVkbPhysicalDevice(), deletion_stack),
+      device(physical_device.GetVkbPhysicalDevice()),
       swapchain(GetWindowWidth(window),
                 GetWindowHeight(window),
                 physical_device.GetPhysicalDevice(),
                 device.GetDevice(),
-                surface.GetSurface(),
-                deletion_stack),
+                surface.GetSurface()),
       graphics_queue(device.GetVkbDevice()),
-      frame_in_flight_data(graphics_queue.GetQueueFamilyIndex(), device.GetDevice(), deletion_stack),
-      compute_queue(device.GetVkbDevice()),
-      immediate_submit(device.GetDevice(), compute_queue.GetQueueFamilyIndex(), deletion_stack),
+      frame_in_flight_data(graphics_queue.GetQueueFamilyIndex(), device.GetDevice()),
+      graphics_queue_2(device.GetVkbDevice()),
+      immediate_submit(device.GetDevice(), graphics_queue_2.GetQueueFamilyIndex()),
       allocator(instance.GetInstance(),
                 device.GetDevice(),
                 physical_device.GetPhysicalDevice(),
-                VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-                deletion_stack),
-      draw_image(vulkan::CreateDrawImage(GetWindowWidth(window),
-                                         GetWindowHeight(window),
-                                         allocator.GetAllocator(),
-                                         device.GetDevice(),
-                                         deletion_stack)),
+                VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT),
+      draw_image(VkExtent3D{(uint32_t)GetWindowWidth(window), (uint32_t)GetWindowHeight(window), 1},
+                 VK_FORMAT_R16G16B16A16_SFLOAT,
+                 VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                 device.GetDevice(),
+                 allocator.GetAllocator()),
       imgui_context(window,
                     device.GetDevice(),
                     instance.GetInstance(),
                     physical_device.GetPhysicalDevice(),
-                    compute_queue.GetQueue(),
-                    compute_queue.GetQueueFamilyIndex(),
-                    swapchain.GetSwapchainImageFormatPtr(),
-                    deletion_stack),
-      descriptor_manager(device.GetDevice(), draw_image.image_view, deletion_stack),
-      pipeline_manager(device.GetDevice(), descriptor_manager.GetDrawImageDescriptorLayoutPtr(), deletion_stack) {}
+                    graphics_queue.GetQueue(),
+                    graphics_queue.GetQueueFamilyIndex(),
+                    swapchain.GetSwapchainImageFormatPtr()),
+      descriptor_manager(device.GetDevice(), draw_image.GetImageView()),
+      pipeline_manager(device.GetDevice(), descriptor_manager.GetDrawImageDescriptorLayoutPtr()) {}
 
-ThreeDimensional::~ThreeDimensional() { Destroy(); }
+ThreeDimensional::~ThreeDimensional() { vkDeviceWaitIdle(device.GetDevice()); }
 
 void ThreeDimensional::DrawFrame() {
     std::cout << "Frame " << frame_counter << std::endl;
@@ -84,6 +82,7 @@ void ThreeDimensional::DrawFrame() {
     }
 
     auto& swapchain_image = swapchain.GetSwapchainImages()[swapchain_image_index];
+    auto& swapchain_image_view = swapchain.GetSwapchainImageViews()[swapchain_image_index];
 
     VkCommandBuffer& command_buffer = GetCurrentFrameInFlightData().command_buffer;
 
@@ -103,18 +102,24 @@ void ThreeDimensional::DrawFrame() {
     DrawBackground(command_buffer);
 
     vulkan::TransitionImage(
-        command_buffer, draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     vulkan::TransitionImage(
         command_buffer, swapchain_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     vulkan::CopyImageBlit(command_buffer,
-                          draw_image.image,
+                          draw_image.GetImage(),
                           swapchain_image,
-                          {draw_image.extent.width, draw_image.extent.height},
+                          {draw_image.GetExtent().width, draw_image.GetExtent().height},
                           swapchain.GetExtent());
 
+    vulkan::TransitionImage(command_buffer,
+                            swapchain_image,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    imgui_context.Draw(command_buffer, swapchain_image_view, swapchain.GetExtent());
+
     vulkan::TransitionImage(
-        command_buffer, swapchain_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        command_buffer, swapchain_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to end command buffer");
@@ -152,16 +157,11 @@ void ThreeDimensional::DrawFrame() {
 
     frame_counter++;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-}
-
-void ThreeDimensional::Destroy() {
-    vkDeviceWaitIdle(device.GetDevice());
-    deletion_stack.Flush();
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 void ThreeDimensional::DrawBackground(VkCommandBuffer command_buffer) {
-    vulkan::TransitionImage(command_buffer, draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    vulkan::TransitionImage(command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     auto clear_subresource_range = vulkan::init::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
 
@@ -170,7 +170,7 @@ void ThreeDimensional::DrawBackground(VkCommandBuffer command_buffer) {
     VkClearColorValue clear_color = {{0.0f, 0.0f, flash, 1.0f}};
 
     vkCmdClearColorImage(
-        command_buffer, draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &clear_subresource_range);
+        command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &clear_subresource_range);
 
     vkCmdBindPipeline(
         command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_manager.GetGradientPipeline().GetPipeline());
@@ -182,8 +182,25 @@ void ThreeDimensional::DrawBackground(VkCommandBuffer command_buffer) {
                             descriptor_manager.GetDrawImageDescriptorSetPtr(),
                             0,
                             nullptr);
-    vkCmdDispatch(
-        command_buffer, std::ceil(draw_image.extent.width / 16.f), std::ceil(draw_image.extent.height / 16.f), 1);
+
+    vulkan::pipelines::GradientPipeline::ComputePushConstants push_constants{
+        .data1 = {1.0f, 0.0f, 0.0f, 1.0f},
+        .data2 = {0.0f, 0.0f, 1.0f, 1.0f},
+        .data3 = {},
+        .data4 = {},
+    };
+
+    vkCmdPushConstants(command_buffer,
+                       pipeline_manager.GetGradientPipeline().GetPipelineLayout(),
+                       VK_SHADER_STAGE_COMPUTE_BIT,
+                       0,
+                       sizeof(vulkan::pipelines::GradientPipeline::ComputePushConstants),
+                       &push_constants);
+
+    vkCmdDispatch(command_buffer,
+                  std::ceil(draw_image.GetExtent().width / 16.f),
+                  std::ceil(draw_image.GetExtent().height / 16.f),
+                  1);
 }
 
 vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {

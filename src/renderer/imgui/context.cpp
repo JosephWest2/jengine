@@ -1,21 +1,23 @@
 #include "context.hpp"
 
+#include <vulkan/vulkan_core.h>
+
 #include <iterator>
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_vulkan.h"
+#include "renderer/vulkan/initializers.hpp"
 
 namespace jengine::renderer::imgui {
 
 Context::Context(SDL_Window* window,
-                 VkDevice device,
+                 VkDevice& device,
                  VkInstance instance,
                  VkPhysicalDevice physical_device,
                  VkQueue queue,
                  uint32_t queue_family_index,
-                 VkFormat* swapchain_format_ptr,
-                 DeletionStack& deletion_stack) {
+                 VkFormat* swapchain_format_ptr): device(device) {
     VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 100},
                                          {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100},
                                          {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 100},
@@ -35,9 +37,7 @@ Context::Context(SDL_Window* window,
     pool_create_info.poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes));
     pool_create_info.pPoolSizes = pool_sizes;
 
-    VkDescriptorPool imgui_descriptor_pool;
-
-    if (vkCreateDescriptorPool(device, &pool_create_info, nullptr, &imgui_descriptor_pool) != VK_SUCCESS) {
+    if (vkCreateDescriptorPool(device, &pool_create_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create imgui descriptor pool");
     }
 
@@ -55,7 +55,7 @@ Context::Context(SDL_Window* window,
     init_info.Device = device;
     init_info.QueueFamily = queue_family_index;
     init_info.Queue = queue;
-    init_info.DescriptorPool = imgui_descriptor_pool;
+    init_info.DescriptorPool = descriptor_pool;
     init_info.MinImageCount = 3;
     init_info.ImageCount = 3;
 
@@ -70,13 +70,6 @@ Context::Context(SDL_Window* window,
     ImGui_ImplVulkan_Init(&init_info);
 
     SDL_SetEventFilter(&Context::EventFilter, nullptr);
-
-    deletion_stack.Push([device, imgui_descriptor_pool]() {
-        ImGui_ImplVulkan_Shutdown();
-        ImGui_ImplSDL3_Shutdown();
-        ImGui::DestroyContext();
-        vkDestroyDescriptorPool(device, imgui_descriptor_pool, nullptr);
-    });
 }
 bool Context::EventFilter(void* user_data __attribute__((unused)), SDL_Event* event) {
     ImGui_ImplSDL3_ProcessEvent(event);
@@ -96,5 +89,20 @@ void Context::NewFrame() {
     ImGui::NewFrame();
     ImGui::ShowDemoWindow();
     ImGui::Render();
+}
+void Context::Draw(VkCommandBuffer command_buffer, VkImageView target_image_view, VkExtent2D swapchain_extent) {
+    VkRenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
+        target_image_view, std::nullopt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo rendering_info = vulkan::init::RenderingInfo(swapchain_extent, &color_attachment, nullptr);
+
+    vkCmdBeginRendering(command_buffer, &rendering_info);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
+    vkCmdEndRendering(command_buffer);
+}
+Context::~Context() {
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+    vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
 }
 }  // namespace jengine::renderer::imgui

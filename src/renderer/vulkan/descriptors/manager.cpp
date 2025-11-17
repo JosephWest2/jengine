@@ -6,7 +6,7 @@
 
 namespace jengine::renderer::vulkan::descriptors {
 
-Manager::Manager(VkDevice device, VkImageView draw_image_view, DeletionStack& deletion_stack)
-    : global_allocator(device, 10, {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1.0f}}, deletion_stack),
-      draw_image_descriptors(global_allocator, device, draw_image_view, deletion_stack) {}
+Manager::Manager(VkDevice& device, VkImageView draw_image_view)
+    : global_allocator(device, 10, {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1.0f}}),
+      draw_image_descriptors(global_allocator, device, draw_image_view) {}
 }  // namespace jengine::renderer::vulkan::descriptors

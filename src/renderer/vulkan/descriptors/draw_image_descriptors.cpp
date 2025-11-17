@@ -5,13 +5,12 @@
 namespace jengine::renderer::vulkan::descriptors {
 
 DrawImageDescriptors::DrawImageDescriptors(DescriptorAllocator& allocator,
-                                           VkDevice device,
-                                           VkImageView draw_image_view,
-                                           DeletionStack& deletion_stack) {
+                                           VkDevice& device,
+                                           VkImageView draw_image_view): device(device) {
     DescriptorLayoutBuilder layout_builder{};
     layout_builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     descriptor_set_layout = layout_builder.Build(device, VK_SHADER_STAGE_COMPUTE_BIT);
-    descriptor_set = allocator.Allocate(device, descriptor_set_layout);
+    descriptor_set = allocator.Allocate(descriptor_set_layout);
 
     VkDescriptorImageInfo image_info{};
     image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -31,9 +30,8 @@ DrawImageDescriptors::DrawImageDescriptors(DescriptorAllocator& allocator,
 
     vkUpdateDescriptorSets(device, 1, &draw_image_write, 0, nullptr);
 
-    deletion_stack.Push([this, device]() { Destroy(device); });
 }
-void DrawImageDescriptors::Destroy(VkDevice device) {
+DrawImageDescriptors::~DrawImageDescriptors() {
     vkDestroyDescriptorSetLayout(device, descriptor_set_layout, nullptr);
 }
 }  // namespace jengine::renderer::vulkan::descriptors

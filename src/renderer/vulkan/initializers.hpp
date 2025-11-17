@@ -23,5 +23,8 @@ VkImageViewCreateInfo ImageViewCreateInfo(VkImage image, VkFormat format, VkImag
 VkRenderingAttachmentInfo RenderingAttachmentInfo(VkImageView image_view,
                                                   std::optional<VkClearValue> clear_value,
                                                   VkImageLayout image_layout);
+VkRenderingInfo RenderingInfo(VkExtent2D render_extent,
+                              VkRenderingAttachmentInfo* color_attachment,
+                              VkRenderingAttachmentInfo* depth_attachment);
 
 }  // namespace jengine::renderer::vulkan

@@ -4,13 +4,10 @@
 
 #include <stdexcept>
 
-#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/initializers.hpp"
 
 namespace jengine::renderer::vulkan {
-ImmediateSubmit::ImmediateSubmit(VkDevice device,
-                                 uint32_t graphics_queue_family_index,
-                                 DeletionStack& deletion_stack) {
+ImmediateSubmit::ImmediateSubmit(VkDevice& device, uint32_t graphics_queue_family_index) : device(device) {
     VkCommandPoolCreateInfo command_pool_create_info =
         init::CommandPoolCreateInfo(graphics_queue_family_index, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     if (vkCreateCommandPool(device, &command_pool_create_info, nullptr, &command_pool) != VK_SUCCESS) {
@@ -26,14 +23,8 @@ ImmediateSubmit::ImmediateSubmit(VkDevice device,
     if (vkCreateFence(device, &fence_create_info, nullptr, &fence) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create immediate submit fence");
     }
-
-    deletion_stack.Push([this, device]() { Destroy(device); });
 };
-void ImmediateSubmit::Destroy(VkDevice device) {
-    vkDestroyCommandPool(device, command_pool, nullptr);
-    vkDestroyFence(device, fence, nullptr);
-}
-void ImmediateSubmit::Submit(VkDevice device, VkQueue queue, std::function<void(VkCommandBuffer)> function) {
+void ImmediateSubmit::Submit(VkQueue queue, std::function<void(VkCommandBuffer)> function) {
     if (vkResetFences(device, 1, &fence) != VK_SUCCESS) {
         throw std::runtime_error("Failed to reset immediate submit fence");
     }
@@ -64,5 +55,9 @@ void ImmediateSubmit::Submit(VkDevice device, VkQueue queue, std::function<void(
     if (vkWaitForFences(device, 1, &fence, true, 1000000000) != VK_SUCCESS) {
         throw std::runtime_error("Failed to wait for immediate submit fence");
     }
+}
+ImmediateSubmit::~ImmediateSubmit() {
+    vkDestroyCommandPool(device, command_pool, nullptr);
+    vkDestroyFence(device, fence, nullptr);
 }
 }  // namespace jengine::renderer::vulkan

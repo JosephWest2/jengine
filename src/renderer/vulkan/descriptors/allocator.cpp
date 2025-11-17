@@ -1,8 +1,10 @@
 #include "allocator.hpp"
+
 #include <iostream>
+#include <vector>
 
 namespace jengine::renderer::vulkan::descriptors {
-void DescriptorAllocator::InitPool(VkDevice device,
+void DescriptorAllocator::InitPool(
                                    uint32_t max_sets,
                                    const std::span<PoolSizeRatio> pool_size_ratios) {
     if (initialized) {
@@ -30,15 +32,14 @@ void DescriptorAllocator::InitPool(VkDevice device,
 
     initialized = true;
 }
-void DescriptorAllocator::ClearDescriptors(VkDevice device) {
+void DescriptorAllocator::ClearDescriptors() {
     if (!initialized) {
         std::cerr << "Warning: ClearDescriptors called but descriptor allocator is not initialized" << std::endl;
     }
     vkResetDescriptorPool(device, pool, 0);
     initialized = false;
 }
-void DescriptorAllocator::Destroy(VkDevice device) { vkDestroyDescriptorPool(device, pool, nullptr); }
-VkDescriptorSet DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLayout layout) {
+VkDescriptorSet DescriptorAllocator::Allocate(VkDescriptorSetLayout layout) {
     VkDescriptorSetAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.pNext = nullptr;
@@ -52,13 +53,13 @@ VkDescriptorSet DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLa
     }
     return descriptor_set;
 }
-DescriptorAllocator::DescriptorAllocator(VkDevice device,
+DescriptorAllocator::DescriptorAllocator(VkDevice& device,
                                          uint32_t max_sets,
-                                         std::initializer_list<PoolSizeRatio> pool_size_ratios,
-                                         DeletionStack& deletion_stack) {
+                                         std::initializer_list<PoolSizeRatio> pool_size_ratios)
+    : device(device) {
     std::vector<PoolSizeRatio> pool_size_ratios_vec(pool_size_ratios);
-    InitPool(device, max_sets, pool_size_ratios_vec);
-    deletion_stack.Push([this, device]() { Destroy(device); });
+    InitPool(max_sets, pool_size_ratios_vec);
 }
-    
-}
+
+DescriptorAllocator::~DescriptorAllocator() { vkDestroyDescriptorPool(device, pool, nullptr); }
+}  // namespace jengine::renderer::vulkan::descriptors

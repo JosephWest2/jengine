@@ -1,9 +1,9 @@
 #include "initializers.hpp"
+
 #include <vulkan/vulkan_core.h>
 namespace jengine::renderer::vulkan::init {
 
-VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t graphics_queue_family_index,
-                                                                               VkCommandPoolCreateFlags flags) {
+VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t graphics_queue_family_index, VkCommandPoolCreateFlags flags) {
     VkCommandPoolCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     create_info.pNext = nullptr;
@@ -12,9 +12,7 @@ VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t graphics_queue_family_ind
     return create_info;
 }
 
-VkCommandBufferAllocateInfo PrimaryCommandBufferAllocateInfo(
-    VkCommandPool pool,
-    uint32_t count) {
+VkCommandBufferAllocateInfo PrimaryCommandBufferAllocateInfo(VkCommandPool pool, uint32_t count) {
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = nullptr;
@@ -55,7 +53,6 @@ VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspect_mask) {
     subresource_range.baseArrayLayer = 0;
     subresource_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
     return subresource_range;
-
 }
 VkSemaphoreSubmitInfo SemaphoreSubmitInfo(VkSemaphore semaphore, VkPipelineStageFlags stage_flags) {
     VkSemaphoreSubmitInfo submit_info = {};
@@ -76,8 +73,8 @@ VkCommandBufferSubmitInfo CommandBufferSubmitInfo(VkCommandBuffer command_buffer
     return submit_info;
 }
 VkSubmitInfo2 SubmitInfo2(VkCommandBufferSubmitInfo* command_buffer_submit_info,
-                              VkSemaphoreSubmitInfo* wait_semaphore_submit_info,
-                              VkSemaphoreSubmitInfo* signal_semaphore_submit_info) {
+                          VkSemaphoreSubmitInfo* wait_semaphore_submit_info,
+                          VkSemaphoreSubmitInfo* signal_semaphore_submit_info) {
     VkSubmitInfo2 submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
     submit_info.pNext = nullptr;
@@ -139,5 +136,19 @@ VkRenderingAttachmentInfo RenderingAttachmentInfo(VkImageView image_view,
     attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachment_info.clearValue = clear_value ? clear_value.value() : VkClearValue();
     return attachment_info;
+}
+VkRenderingInfo RenderingInfo(VkExtent2D render_extent,
+                              VkRenderingAttachmentInfo* color_attachment,
+                              VkRenderingAttachmentInfo* depth_attachment) {
+    VkRenderingInfo render_info{};
+    render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    render_info.pNext = nullptr;
+    render_info.renderArea = VkRect2D{VkOffset2D{0, 0}, render_extent};
+    render_info.layerCount = 1;
+    render_info.colorAttachmentCount = 1;
+    render_info.pColorAttachments = color_attachment;
+    render_info.pDepthAttachment = depth_attachment;
+    render_info.pStencilAttachment = nullptr;
+    return render_info;
 }
 }  // namespace jengine::renderer::vulkan::init

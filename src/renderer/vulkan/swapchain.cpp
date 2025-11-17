@@ -3,22 +3,13 @@
 #include <iostream>
 #include <stdexcept>
 #include "VkBootstrap.h"
-#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/initializers.hpp"
 
 namespace jengine::renderer::vulkan {
 
 
-Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, DeletionStack& deletion_stack) {
-    if (!physical_device) {
-        throw std::runtime_error("Physical device is null");
-    }
-    if (!device) {
-        throw std::runtime_error("Device is null");
-    }
-    if (!surface) {
-        throw std::runtime_error("Surface is null");
-    }
+Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice& device, VkSurfaceKHR surface): device(device) {
+
     vkb::SwapchainBuilder swapchain_builder(physical_device, device, surface);
 
     swapchain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -49,13 +40,9 @@ Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, 
             throw std::runtime_error("Failed to create render finished semaphore");
         }
     }
-
-    deletion_stack.Push([this, device]() { Destroy(device); });
 };
 
-void Swapchain::Destroy(VkDevice device) {
-    assert(swapchain);
-    assert(device);
+Swapchain::~Swapchain() {
     std::cout << "Destroying swapchain" << std::endl;
     for (auto view : swapchain_image_views) {
         vkDestroyImageView(device, view, nullptr);

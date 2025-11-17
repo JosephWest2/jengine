@@ -3,25 +3,34 @@
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
 
-#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/memory_allocator.hpp"
 namespace jengine::renderer::vulkan {
 
-struct AllocatedImage {
+class AllocatedImage {
+  public:
+    AllocatedImage(VkExtent3D extent,
+                   VkFormat format,
+                   VkImageUsageFlags usage_flags,
+                   VkDevice& device,
+                   VmaAllocator& allocator);
+    ~AllocatedImage();
+
+    VkImage GetImage() const { return image; }
+    VkImageView GetImageView() const { return image_view; }
+    VkExtent3D GetExtent() const { return extent; }
+    VkFormat GetFormat() const { return format; }
+
+  private:
     VkImage image{};
     VkImageView image_view{};
     VmaAllocation allocation{};
     VkExtent3D extent{};
     VkFormat format{};
 
-    void Destroy(VkDevice device, VmaAllocator allocator);
+    // held for destruction
+    VkDevice& device;
+    VmaAllocator& allocator;
 };
-
-AllocatedImage CreateDrawImage(uint width,
-                               uint height,
-                               VmaAllocator allocator,
-                               VkDevice device,
-                               DeletionStack& deletion_stack);
 
 void TransitionImage(VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 

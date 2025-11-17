@@ -4,15 +4,12 @@
 #include <vulkan/vulkan_core.h>
 
 #include <vector>
-#include "renderer/vulkan/deletion_stack.hpp"
 namespace jengine::renderer::vulkan {
 
 class Swapchain {
   public:
-    Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, DeletionStack& deletion_stack);
-
-    // does not call device wait idle
-    void Destroy(VkDevice device);
+    Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice& device, VkSurfaceKHR surface);
+    ~Swapchain();
 
     VkFormat GetSwapchainImageFormat() const { return swapchain_image_format; }
     VkFormat* GetSwapchainImageFormatPtr() { return &swapchain_image_format; }
@@ -32,5 +29,8 @@ class Swapchain {
     std::vector<VkSemaphore> image_render_finished_semaphores{};
     std::vector<VkImage> swapchain_images{};
     std::vector<VkImageView> swapchain_image_views{};
+
+    // held for destruction
+    VkDevice& device;
 };
 }  // namespace jengine::renderer::vulkan

@@ -9,14 +9,13 @@ class Instance {
       Instance(const char* app_name, bool use_validation_layers);
       ~Instance();
       vkb::Instance& VkbInstance() { return vkb_instance; }
-      VkInstance GetInstance() { return vkb_instance.instance; }
+      VkInstance& GetInstance() { return vkb_instance.instance; }
 
       Instance(const Instance&) = delete;
       Instance& operator=(const Instance&) = delete;
       Instance(Instance&& other);
       Instance& operator=(Instance&& other);
 
-      void Destroy();
 
     private:
 

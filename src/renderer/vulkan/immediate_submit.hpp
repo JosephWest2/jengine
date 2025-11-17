@@ -2,20 +2,20 @@
 
 #include <vulkan/vulkan_core.h>
 #include <functional>
-#include <stack>
-#include "renderer/vulkan/deletion_stack.hpp"
 namespace jengine::renderer::vulkan {
 class ImmediateSubmit {
   public:
-    ImmediateSubmit(VkDevice device, uint32_t graphics_queue_family_index, DeletionStack& deletion_stack);
+    ImmediateSubmit(VkDevice& device, uint32_t graphics_queue_family_index);
+    ~ImmediateSubmit();
 
-    void Destroy(VkDevice device);
-
-    void Submit(VkDevice device, VkQueue queue, std::function<void(VkCommandBuffer)> function);
+    void Submit(VkQueue queue, std::function<void(VkCommandBuffer)> function);
 
   private:
     VkFence fence;
     VkCommandBuffer command_buffer;
     VkCommandPool command_pool;
+
+    // held for destruction
+    VkDevice& device;
 };
 }  // namespace jengine::renderer::vulkan

@@ -1,23 +1,32 @@
 #include "gradient_pipeline.hpp"
+#include <vulkan/vulkan_core.h>
+
+#include <stdexcept>
 
 #include "renderer/vulkan/pipelines/load_shader_module.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
 
-GradientPipeline::GradientPipeline(VkDescriptorSetLayout* draw_image_descriptor_layout_ptr,
-                                   VkDevice device,
-                                   DeletionStack& deletion_stack) {
+GradientPipeline::GradientPipeline(VkDescriptorSetLayout* draw_image_descriptor_layout_ptr, VkDevice& device): device(device) {
     VkPipelineLayoutCreateInfo compute_pipeline_layout_create_info{};
     compute_pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     compute_pipeline_layout_create_info.pNext = nullptr;
     compute_pipeline_layout_create_info.pSetLayouts = draw_image_descriptor_layout_ptr;
     compute_pipeline_layout_create_info.setLayoutCount = 1;
 
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.offset = 0;
+    push_constant_range.size = sizeof(ComputePushConstants);
+    push_constant_range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    compute_pipeline_layout_create_info.pPushConstantRanges = &push_constant_range;
+    compute_pipeline_layout_create_info.pushConstantRangeCount = 1;
+
     if (vkCreatePipelineLayout(device, &compute_pipeline_layout_create_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout");
     }
 
-    VkShaderModule compute_shader_module = LoadShaderModule("shaders/gradient.comp.spv", device);
+    VkShaderModule compute_shader_module = LoadShaderModule("shaders/gradient_color.comp.spv", device);
     if (!compute_shader_module) {
         throw std::runtime_error("Failed to create compute shader module");
     }
@@ -41,10 +50,8 @@ GradientPipeline::GradientPipeline(VkDescriptorSetLayout* draw_image_descriptor_
     }
 
     vkDestroyShaderModule(device, compute_shader_module, nullptr);
-
-    deletion_stack.Push([this, device]() { Destroy(device); });
 }
-void GradientPipeline::Destroy(VkDevice device) {
+GradientPipeline::~GradientPipeline() {
     vkDestroyPipeline(device, pipeline, nullptr);
     vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 }

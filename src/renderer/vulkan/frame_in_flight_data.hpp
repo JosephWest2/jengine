@@ -5,7 +5,6 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "renderer/vulkan/deletion_stack.hpp"
 #include "renderer/vulkan/initializers.hpp"
 
 namespace jengine::renderer::vulkan {
@@ -19,23 +18,32 @@ struct FrameInFlightData {
 template <size_t S>
 class FrameInFlightDataContainer {
   public:
-    FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice device, DeletionStack& deletion_stack);
+    FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice& device);
+    ~FrameInFlightDataContainer();
 
     FrameInFlightData& operator[](size_t index) { return frame_in_flight_data[index]; }
 
     constexpr size_t Size() const { return S; }
 
-    // does not call device wait idle
-    void Destroy(VkDevice device);
-
   private:
     FrameInFlightData frame_in_flight_data[S];
+
+    // held for destruction
+    VkDevice& device;
 };
 
 template <size_t S>
-FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queue_family_index,
-                                                          VkDevice device,
-                                                          DeletionStack& deletion_stack) {
+inline FrameInFlightDataContainer<S>::~FrameInFlightDataContainer() {
+    std::cout << "Destroying frame in flight data" << std::endl;
+    for (auto& frame_in_flight_data : frame_in_flight_data) {
+        vkDestroyCommandPool(device, frame_in_flight_data.command_pool, nullptr);
+        vkDestroySemaphore(device, frame_in_flight_data.image_available_semaphore, nullptr);
+        vkDestroyFence(device, frame_in_flight_data.render_in_progress_fence, nullptr);
+    }
+}
+
+template <size_t S>
+FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice& device): device(device) {
     VkCommandPoolCreateInfo command_pool_create_info =
         init::CommandPoolCreateInfo(graphics_queue_family_index, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
@@ -66,18 +74,6 @@ FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queu
             VK_SUCCESS) {
             throw std::runtime_error("Failed to create render in process fence");
         }
-    }
-
-    deletion_stack.Push([this, device]() { Destroy(device); });
-}
-
-template <size_t S>
-void FrameInFlightDataContainer<S>::Destroy(VkDevice device) {
-    std::cout << "Destroying frame in flight data" << std::endl;
-    for (auto& frame_in_flight_data : frame_in_flight_data) {
-        vkDestroyCommandPool(device, frame_in_flight_data.command_pool, nullptr);
-        vkDestroySemaphore(device, frame_in_flight_data.image_available_semaphore, nullptr);
-        vkDestroyFence(device, frame_in_flight_data.render_in_progress_fence, nullptr);
     }
 }
 

@@ -2,21 +2,18 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include "renderer/vulkan/deletion_stack.hpp"
 #include "vk_mem_alloc.h"
 
 namespace jengine::renderer::vulkan {
 class MemoryAllocator {
   public:
     MemoryAllocator(VkInstance instance,
-                    VkDevice device,
+                    VkDevice& device,
                     VkPhysicalDevice physical_device,
-                    VmaAllocatorCreateFlags flags,
-                    DeletionStack& deletion_stack);
+                    VmaAllocatorCreateFlags flags);
+    ~MemoryAllocator();
 
-    VmaAllocator GetAllocator() const { return allocator; }
-
-    void Destroy();
+    VmaAllocator& GetAllocator() { return allocator; }
 
   private:
     VmaAllocator allocator;

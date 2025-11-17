@@ -38,44 +38,6 @@ void TransitionImage(VkCommandBuffer command_buffer,
 
     vkCmdPipelineBarrier2(command_buffer, &dependency_info);
 }
-AllocatedImage CreateDrawImage(uint width, uint height, VmaAllocator allocator, VkDevice device, DeletionStack& deletion_stack) {
-    AllocatedImage result = {
-        .extent = {.width = width, .height = height, .depth = 1},
-        .format = VK_FORMAT_R16G16B16A16_SFLOAT,
-    };
-
-    VkImageCreateInfo image_create_info =
-        init::ImageCreateInfo(result.format,
-                              VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-
-                              result.extent);
-    VmaAllocationCreateInfo allocation_create_info = {};
-    allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    allocation_create_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-    if (vmaCreateImage(
-            allocator, &image_create_info, &allocation_create_info, &result.image, &result.allocation, nullptr) !=
-        VK_SUCCESS) {
-        throw std::runtime_error("Failed to create draw image");
-    }
-
-    VkImageViewCreateInfo image_view_create_info =
-        init::ImageViewCreateInfo(result.image, result.format, VK_IMAGE_ASPECT_COLOR_BIT);
-
-    assert(device);
-    assert(result.image);
-    if (vkCreateImageView(device, &image_view_create_info, nullptr, &result.image_view) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create draw image view");
-    }
-
-    deletion_stack.Push([device, allocator, result]() {
-        vkDestroyImageView(device, result.image_view, nullptr);
-        vmaDestroyImage(allocator, result.image, result.allocation);
-    });
-
-    return result;
-}
 void CopyImageBlit(VkCommandBuffer command_buffer,
                    VkImage src_image,
                    VkImage dst_image,
@@ -110,13 +72,32 @@ void CopyImageBlit(VkCommandBuffer command_buffer,
 
     vkCmdBlitImage2(command_buffer, &blit_image_info);
 }
-void AllocatedImage::Destroy(VkDevice device, VmaAllocator allocator) {
-    assert(image);
-    assert(image_view);
-    assert(device);
-    assert(allocator);
+AllocatedImage::~AllocatedImage() {
     vkDestroyImageView(device, image_view, nullptr);
     vmaDestroyImage(allocator, image, allocation);
-    *this = {};
+}
+AllocatedImage::AllocatedImage(VkExtent3D extent,
+                               VkFormat format,
+                               VkImageUsageFlags usage_flags,
+                               VkDevice& device,
+                               VmaAllocator& allocator)
+    : extent(extent), format(format), device(device), allocator(allocator) {
+    VkImageCreateInfo image_create_info = init::ImageCreateInfo(format, usage_flags, extent);
+    VmaAllocationCreateInfo allocation_create_info = {};
+    allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    allocation_create_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    if (vmaCreateImage(allocator, &image_create_info, &allocation_create_info, &image, &allocation, nullptr) !=
+        VK_SUCCESS) {
+        throw std::runtime_error("Failed to create image");
+    }
+
+    VkImageViewCreateInfo image_view_create_info = init::ImageViewCreateInfo(image, format, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    assert(device);
+    assert(image);
+    if (vkCreateImageView(device, &image_view_create_info, nullptr, &image_view) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create image view");
+    }
 }
 }  // namespace jengine::renderer::vulkan
