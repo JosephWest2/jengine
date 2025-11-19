@@ -7,7 +7,7 @@
 
 namespace jengine::renderer::vulkan::pipelines {
 
-GradientPipeline::GradientPipeline(VkDescriptorSetLayout* draw_image_descriptor_layout_ptr, VkDevice& device): device(device) {
+GradientAndSkyPipeline::GradientAndSkyPipeline(VkDescriptorSetLayout* draw_image_descriptor_layout_ptr, VkDevice& device): device(device) {
     VkPipelineLayoutCreateInfo compute_pipeline_layout_create_info{};
     compute_pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     compute_pipeline_layout_create_info.pNext = nullptr;
@@ -25,10 +25,14 @@ GradientPipeline::GradientPipeline(VkDescriptorSetLayout* draw_image_descriptor_
     if (vkCreatePipelineLayout(device, &compute_pipeline_layout_create_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout");
     }
+    VkShaderModule sky_shader_module = LoadShaderModule("shaders/sky.comp.spv", device);
+    if (!sky_shader_module) {
+        throw std::runtime_error("Failed to create sky shader module");
+    }
 
     VkShaderModule compute_shader_module = LoadShaderModule("shaders/gradient_color.comp.spv", device);
     if (!compute_shader_module) {
-        throw std::runtime_error("Failed to create compute shader module");
+        throw std::runtime_error("Failed to create gradient_color shader module");
     }
 
     VkPipelineShaderStageCreateInfo compute_pipeline_shader_stage_create_info{};
@@ -44,15 +48,17 @@ GradientPipeline::GradientPipeline(VkDescriptorSetLayout* draw_image_descriptor_
     compute_pipeline_create_info.layout = pipeline_layout;
     compute_pipeline_create_info.stage = compute_pipeline_shader_stage_create_info;
 
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, nullptr, &pipeline) !=
+    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, nullptr, &gradient_pipeline) !=
         VK_SUCCESS) {
         throw std::runtime_error("Failed to create compute pipeline");
     }
 
     vkDestroyShaderModule(device, compute_shader_module, nullptr);
+    vkDestroyShaderModule(device, sky_shader_module, nullptr);
 }
-GradientPipeline::~GradientPipeline() {
-    vkDestroyPipeline(device, pipeline, nullptr);
+GradientAndSkyPipeline::~GradientAndSkyPipeline() {
+    vkDestroyPipeline(device, sky_pipeline, nullptr);
+    vkDestroyPipeline(device, gradient_pipeline, nullptr);
     vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 }
 }  // namespace jengine::renderer::vulkan::pipelines

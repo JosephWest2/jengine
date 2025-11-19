@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
+#include <functional>
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_video.h"
@@ -16,7 +17,7 @@ class Context {
             uint32_t queue_family_index,
             VkFormat* swapchain_format_ptr);
     ~Context();
-    void NewFrame();
+    void NewFrame(std::function<void()> fn);
     void Draw(VkCommandBuffer command_buffer, VkImageView target_image_view, VkExtent2D swapchain_extent);
 
   private:

@@ -64,6 +64,7 @@ class ThreeDimensional : public Base {
     void ImmediateSubmit(std::function<void(VkCommandBuffer command_buffer)>&& function);
 
     void DrawBackground(VkCommandBuffer command_buffer);
+    void DrawGeometry(VkCommandBuffer command_buffer);
 
     vulkan::FrameInFlightData& GetCurrentFrameInFlightData();
 };

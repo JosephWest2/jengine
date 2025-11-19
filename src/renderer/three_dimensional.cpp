@@ -9,6 +9,7 @@
 #include <iostream>
 #include <thread>
 
+#include "imgui.h"
 #include "renderer/vulkan/graphics_queue.hpp"
 #include "renderer/vulkan/image.hpp"
 #include "renderer/vulkan/immediate_submit.hpp"
@@ -52,7 +53,9 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, vulkan::Instance& instanc
                     graphics_queue.GetQueueFamilyIndex(),
                     swapchain.GetSwapchainImageFormatPtr()),
       descriptor_manager(device.GetDevice(), draw_image.GetImageView()),
-      pipeline_manager(device.GetDevice(), descriptor_manager.GetDrawImageDescriptorLayoutPtr()) {}
+      pipeline_manager(device.GetDevice(),
+                       draw_image.GetFormat(),
+                       descriptor_manager.GetDrawImageDescriptorLayoutPtr()) {}
 
 ThreeDimensional::~ThreeDimensional() { vkDeviceWaitIdle(device.GetDevice()); }
 
@@ -60,7 +63,25 @@ void ThreeDimensional::DrawFrame() {
     std::cout << "Frame " << frame_counter << std::endl;
 
     // imgui setup
-    imgui_context.NewFrame();
+    imgui_context.NewFrame([this]() {
+        auto pipeline_name = pipeline_manager.GetGradientAndSkyPipeline().SelectedPipelineString();
+
+        ImGui::Text("Selected pipeline: %s", pipeline_name.c_str());
+
+        ImGui::InputFloat4("sky1", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data1);
+        ImGui::InputFloat4("sky2", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data2);
+        ImGui::InputFloat4("sky3", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data3);
+        ImGui::InputFloat4("sky4", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data4);
+
+        ImGui::InputFloat4("gradient1",
+                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data1);
+        ImGui::InputFloat4("gradient2",
+                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data2);
+        ImGui::InputFloat4("gradient3",
+                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data3);
+        ImGui::InputFloat4("gradient4",
+                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data4);
+    });
 
     if (vkWaitForFences(
             device.GetDevice(), 1, &GetCurrentFrameInFlightData().render_in_progress_fence, true, 1000000000) !=
@@ -100,9 +121,13 @@ void ThreeDimensional::DrawFrame() {
     }
 
     DrawBackground(command_buffer);
+    vulkan::TransitionImage(
+        command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    DrawGeometry(command_buffer);
 
     vulkan::TransitionImage(
-        command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     vulkan::TransitionImage(
         command_buffer, swapchain_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -172,30 +197,24 @@ void ThreeDimensional::DrawBackground(VkCommandBuffer command_buffer) {
     vkCmdClearColorImage(
         command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &clear_subresource_range);
 
-    vkCmdBindPipeline(
-        command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_manager.GetGradientPipeline().GetPipeline());
+    vkCmdBindPipeline(command_buffer,
+                      VK_PIPELINE_BIND_POINT_COMPUTE,
+                      pipeline_manager.GetGradientAndSkyPipeline().GetGradientPipeline());
     vkCmdBindDescriptorSets(command_buffer,
                             VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipeline_manager.GetGradientPipeline().GetPipelineLayout(),
+                            pipeline_manager.GetGradientAndSkyPipeline().GetPipelineLayout(),
                             0,
                             1,
                             descriptor_manager.GetDrawImageDescriptorSetPtr(),
                             0,
                             nullptr);
 
-    vulkan::pipelines::GradientPipeline::ComputePushConstants push_constants{
-        .data1 = {1.0f, 0.0f, 0.0f, 1.0f},
-        .data2 = {0.0f, 0.0f, 1.0f, 1.0f},
-        .data3 = {},
-        .data4 = {},
-    };
-
     vkCmdPushConstants(command_buffer,
-                       pipeline_manager.GetGradientPipeline().GetPipelineLayout(),
+                       pipeline_manager.GetGradientAndSkyPipeline().GetPipelineLayout(),
                        VK_SHADER_STAGE_COMPUTE_BIT,
                        0,
-                       sizeof(vulkan::pipelines::GradientPipeline::ComputePushConstants),
-                       &push_constants);
+                       sizeof(vulkan::pipelines::GradientAndSkyPipeline::ComputePushConstants),
+                       &pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants());
 
     vkCmdDispatch(command_buffer,
                   std::ceil(draw_image.GetExtent().width / 16.f),
@@ -207,4 +226,34 @@ vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {
     return frame_in_flight_data[frame_counter % frame_in_flight_data.Size()];
 }
 
+void ThreeDimensional::DrawGeometry(VkCommandBuffer command_buffer) {
+    VkRenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
+        draw_image.GetImageView(), std::nullopt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo rendering_info = vulkan::init::RenderingInfo(
+        {draw_image.GetExtent().width, draw_image.GetExtent().height}, &color_attachment, nullptr);
+
+    vkCmdBeginRendering(command_buffer, &rendering_info);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_manager.GetTrianglePipeline());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = draw_image.GetExtent().width;
+    viewport.height = draw_image.GetExtent().height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = {draw_image.GetExtent().width, draw_image.GetExtent().height};
+
+    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+
+    vkCmdEndRendering(command_buffer);
+}
 }  // namespace jengine::renderer

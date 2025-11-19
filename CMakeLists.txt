@@ -17,19 +17,16 @@ FetchContent_Declare(
     URL https://github.com/libsdl-org/SDL/releases/download/release-3.2.26/SDL3-3.2.26.tar.gz
     URL_HASH SHA256=dad488474a51a0b01d547cd2834893d6299328d2e30f479a3564088b5476bae2
 )
-
 FetchContent_Declare(
     vkbootstrap
     URL https://github.com/charles-lunarg/vk-bootstrap/archive/refs/tags/v1.4.330.tar.gz
     URL_HASH SHA256=a3cfe83a297feea9c5229e6b373b48b0f4797da018217979794e1edc9686243f
 )
-
 FetchContent_Declare(
     abseil
     URL https://github.com/abseil/abseil-cpp/releases/download/20250814.1/abseil-cpp-20250814.1.tar.gz
     URL_HASH SHA256=1692f77d1739bacf3f94337188b78583cf09bab7e420d2dc6c5605a4f86785a1
 )
-
 FetchContent_Declare(
     vma
     URL https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.tar.gz
@@ -99,6 +96,7 @@ add_library(${PROJECT_NAME}
     src/renderer/vulkan/immediate_submit.cpp
     src/renderer/imgui/context.cpp
     src/renderer/three_dimensional.cpp
+    src/renderer/vulkan/pipelines/graphics_pipeline_builder.cpp
     src/window.cpp
     src/engine.cpp
 )
@@ -129,7 +127,7 @@ target_include_directories(${PROJECT_NAME}_example PRIVATE src)
 find_program(GLSL_VALIDATOR glslangValidator)
 
 if(NOT GLSL_VALIDATOR)
-    message(FATAL_ERROR "glslangValidator not found. Please install the Vulkan SDK or ensure it's in your PATH.")
+    message(FATAL_ERROR "glslangValidator not found. Please install glslangValidator (usually from the Vulkan SDK) or ensure it's in your PATH.")
 endif()
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES

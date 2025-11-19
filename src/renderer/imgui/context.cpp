@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include <functional>
 #include <iterator>
 
 #include "imgui.h"
@@ -83,10 +84,11 @@ bool Context::EventFilter(void* user_data __attribute__((unused)), SDL_Event* ev
     }
     return true;
 }
-void Context::NewFrame() {
+void Context::NewFrame(std::function<void()> fn) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+    fn();
     ImGui::ShowDemoWindow();
     ImGui::Render();
 }

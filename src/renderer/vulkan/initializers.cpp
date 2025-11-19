@@ -151,4 +151,28 @@ VkRenderingInfo RenderingInfo(VkExtent2D render_extent,
     render_info.pStencilAttachment = nullptr;
     return render_info;
 }
+VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits stage,
+                                                              VkShaderModule shader_module,
+                                                              const char* entry) {
+    VkPipelineShaderStageCreateInfo shader_stage_create_info{};
+    shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shader_stage_create_info.pNext = nullptr;
+
+    shader_stage_create_info.stage = stage;
+    shader_stage_create_info.module = shader_module;
+    shader_stage_create_info.pName = entry;
+    return shader_stage_create_info;
+}
+VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo() {
+    VkPipelineLayoutCreateInfo layout_create_info{};
+    layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layout_create_info.pNext = nullptr;
+
+    layout_create_info.flags = 0;
+    layout_create_info.setLayoutCount = 0;
+    layout_create_info.pSetLayouts = nullptr;
+    layout_create_info.pushConstantRangeCount = 0;
+    layout_create_info.pPushConstantRanges = nullptr;
+    return layout_create_info;
+}
 }  // namespace jengine::renderer::vulkan::init

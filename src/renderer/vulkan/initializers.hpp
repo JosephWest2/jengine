@@ -15,8 +15,8 @@ VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspect_mask);
 VkSemaphoreSubmitInfo SemaphoreSubmitInfo(VkSemaphore semaphore, VkPipelineStageFlags stage_flags);
 VkCommandBufferSubmitInfo CommandBufferSubmitInfo(VkCommandBuffer command_buffer);
 VkSubmitInfo2 SubmitInfo2(VkCommandBufferSubmitInfo* command_buffer_submit_info,
-                              VkSemaphoreSubmitInfo* wait_semaphore_submit_info,
-                              VkSemaphoreSubmitInfo* signal_semaphore_submit_info);
+                          VkSemaphoreSubmitInfo* wait_semaphore_submit_info,
+                          VkSemaphoreSubmitInfo* signal_semaphore_submit_info);
 VkImageCreateInfo ImageCreateInfo(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent);
 VkImageViewCreateInfo ImageViewCreateInfo(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
 // if clear_value is set, image will be cleared with the color
@@ -26,5 +26,8 @@ VkRenderingAttachmentInfo RenderingAttachmentInfo(VkImageView image_view,
 VkRenderingInfo RenderingInfo(VkExtent2D render_extent,
                               VkRenderingAttachmentInfo* color_attachment,
                               VkRenderingAttachmentInfo* depth_attachment);
-
-}  // namespace jengine::renderer::vulkan
+VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits stage,
+                                                              VkShaderModule shader_module,
+                                                              const char* entry = "main");
+VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo();
+}  // namespace jengine::renderer::vulkan::init
