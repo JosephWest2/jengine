@@ -1,51 +1,72 @@
 #include "instance.hpp"
 
+#include <SDL3/SDL_vulkan.h>
+#include <vulkan/vk_platform.h>
+#include <vulkan/vulkan_core.h>
+
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
+
 #include "VkBootstrap.h"
-#include <format>
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan {
 
-Instance::Instance(const char* app_name, bool use_validation_layers) {
-    if (vulkan_initialized) {
-        throw std::runtime_error("Vulkan instance already initialized, multiple instances not supported");
-    }
+Instance::Instance(const char* app_name, bool use_validation_layers)
+    : context(), instance(CreateInstance(context, app_name, use_validation_layers)) {
     vkb::InstanceBuilder instance_builder;
-
-    auto res = instance_builder
-        .set_app_name(app_name)
-        .request_validation_layers(use_validation_layers)
-        .use_default_debug_messenger()
-        .require_api_version(1, 3, 0)
-        .build();
-
-    if (!res.has_value()) {
-        throw std::runtime_error(std::format("Failed to create Vulkan instance: {}", res.error().message()));
-    }
-
-    vkb_instance = res.value();
-    vulkan_initialized = true;
 }
 
+bool LayersAvailable(std::vector<const char*> validation_layers) {
+    uint32_t layer_count;
+    vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
 
-Instance::Instance(Instance&& other) {
-    vkb_instance = other.vkb_instance;
-    other.vkb_instance = {};
-};
-
-Instance& Instance::operator=(Instance&& other) {
-    if (this != &other) {
-        vkb_instance = other.vkb_instance;
-        other.vkb_instance = {};
-    }
-    return *this;
+    std::vector<VkLayerProperties> layers(layer_count);
+    vkEnumerateInstanceLayerProperties(&layer_count, layers.data());
+    return std::ranges::all_of(layers, [&](VkLayerProperties const& layer) {
+        if (!std::ranges::contains(validation_layers, layer.layerName)) {
+            std::cerr << "Validation layer not avaialble: " << layer.layerName << std::endl;
+            return false;
+        }
+        return true;
+    });
 }
-Instance::~Instance() {
-    if (vulkan_initialized) {
-        std::cout << "Destroying Vulkan instance" << std::endl;
-        vkb::destroy_instance(vkb_instance);
-        vulkan_initialized = false;
+
+vk::raii::Instance CreateInstance(vk::raii::Context& context, const char* app_name, bool use_validation_layers) {
+    vk::ApplicationInfo app_info = {
+        .pApplicationName = app_name,
+        .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+        .pEngineName = "JEngine",
+        .engineVersion = VK_MAKE_VERSION(0, 0, 1),
+        .apiVersion = VK_API_VERSION_1_3,
+    };
+
+    uint32_t extension_count;
+    auto extensions = SDL_Vulkan_GetInstanceExtensions(&extension_count);
+
+    std::vector<const char*> extension_names(extensions, extensions + extension_count);
+    extension_names.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+    std::vector<const char*> validation_layers;
+    if (use_validation_layers) {
+        validation_layers.push_back("VK_LAYER_KHRONOS_validation");
     }
-};
+
+    if (!LayersAvailable(validation_layers)) {
+        throw std::runtime_error("Requested validation layers not available");
+    }
+
+    vk::InstanceCreateInfo create_info = {
+        .flags = vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR,
+        .pApplicationInfo = &app_info,
+        .enabledLayerCount = static_cast<uint32_t>(validation_layers.size()),
+        .ppEnabledLayerNames = validation_layers.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(extension_names.size()),
+        .ppEnabledExtensionNames = extension_names.data(),
+    };
+
+    return vk::raii::Instance(context, create_info);
+}
 }  // namespace jengine::renderer::vulkan

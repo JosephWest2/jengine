@@ -12,6 +12,7 @@ class Manager {
     VkPipeline GetTrianglePipeline() const { return triangle_pipeline; }
     VkPipelineLayout GetTrianglePipelineLayout() const { return triangle_pipeline_layout; }
 
+
   private:
     void InitTrianglePipeline(VkDevice& device, VkFormat draw_image_format);
     GradientAndSkyPipeline gradient_and_sky_pipeline;

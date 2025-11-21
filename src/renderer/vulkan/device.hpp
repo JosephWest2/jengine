@@ -1,17 +1,20 @@
 #pragma once
 
-#include "VkBootstrap.h"
+#include <vulkan/vulkan_raii.hpp>
+
+#include "renderer/vulkan/physical_device.hpp"
 
 namespace jengine::renderer::vulkan {
+
 class Device {
   public:
-    Device(vkb::PhysicalDevice& physical_device);
-    ~Device();
-
-    VkDevice& GetDevice() { return vkb_device.device; }
-    vkb::Device& GetVkbDevice() { return vkb_device; }
+    Device(vulkan::PhysicalDevice& physical_device);
+    vk::raii::Device& GetDevice() { return device; }
+    const vk::Device& GetDeviceHandle() { return *device; }
 
   private:
-    vkb::Device vkb_device;
+    vk::raii::Device device;
+
+    static vk::raii::Device CreateDevice(vulkan::PhysicalDevice& physical_device);
 };
 }  // namespace jengine::renderer::vulkan

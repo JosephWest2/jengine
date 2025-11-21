@@ -1,34 +1,61 @@
 #include "physical_device.hpp"
 
-#include <format>
+#include <map>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
-#include "VkBootstrap.h"
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan {
 
-PhysicalDevice::PhysicalDevice(VkSurfaceKHR surface, vkb::Instance& instance) {
+PhysicalDevice::PhysicalDevice(vk::raii::Instance& instance) : physical_device(CreatePhysicalDevice(instance)) {}
 
-    VkPhysicalDeviceVulkan13Features vulkan_1_3_features = {};
-    vulkan_1_3_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    vulkan_1_3_features.synchronization2 = true;
-    vulkan_1_3_features.dynamicRendering = true;
-
-    VkPhysicalDeviceVulkan12Features vulkan_1_2_features = {};
-    vulkan_1_2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-    vulkan_1_2_features.descriptorIndexing = true;
-    vulkan_1_2_features.bufferDeviceAddress = true;
-
-    vkb::PhysicalDeviceSelector physical_device_selector(instance, surface);
-
-    auto physical_device_res = physical_device_selector.set_minimum_version(1, 3)
-                                   .set_required_features_13(vulkan_1_3_features)
-                                   .set_required_features_12(vulkan_1_2_features)
-                                   .select();
-
-    if (!physical_device_res.has_value()) {
-        throw std::runtime_error(
-            std::format("Failed to select Vulkan physical device: {}", physical_device_res.error().message()));
+vk::raii::PhysicalDevice PhysicalDevice::CreatePhysicalDevice(vk::raii::Instance& instance) {
+    std::multimap<int, vk::raii::PhysicalDevice> device_scores;
+    for (const auto& physical_device : instance.enumeratePhysicalDevices()) {
+        int score = 0;
+        if (physical_device.getProperties().deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
+            score += 1000;
+        }
+        score += physical_device.getProperties().limits.maxImageDimension2D;
+        if (!physical_device.getFeatures().geometryShader) {
+            score = std::numeric_limits<int>::min();
+        }
+        device_scores.insert({score, physical_device});
     }
-    vkb_physical_device = physical_device_res.value();
+    return device_scores.rbegin()->second;
+}
+std::optional<uint32_t> PhysicalDevice::GetPhysicalDeviceQueueFamilyIndex(vk::raii::PhysicalDevice& physical_device,
+                                                                          vk::QueueFlagBits queue_flags) {
+    const auto queues = physical_device.getQueueFamilyProperties();
+    for (size_t i = 0; i < queues.size(); i++) {
+        if (queues[i].queueFlags & queue_flags) {
+            return static_cast<uint32_t>(i);
+        }
+    }
+    return std::nullopt;
+}
+uint32_t PhysicalDevice::GetQueueFamilyIndex(vk::QueueFlagBits queue_flags) {
+    if (!index_cache.contains(queue_flags)) {
+        auto index = GetPhysicalDeviceQueueFamilyIndex(physical_device, queue_flags);
+        if (!index.has_value()) {
+            throw std::runtime_error("Failed to get queue family index");
+        }
+        index_cache[queue_flags] = index.value();
+    }
+    return index_cache[queue_flags];
+}
+uint32_t PhysicalDevice::GetPresentQueueIndex(const vk::SurfaceKHR& surface) {
+    if (present_index_cache.contains(surface)) {
+        return present_index_cache[surface];
+    }
+    const auto queues = physical_device.getQueueFamilyProperties();
+    for (size_t i = 0; i < queues.size(); i++) {
+        if (physical_device.getSurfaceSupportKHR(i, surface)) {
+            present_index_cache[surface] = static_cast<uint32_t>(i);
+            return static_cast<uint32_t>(i);
+        }
+    }
+    throw std::runtime_error("Failed to get present queue index for surface");
 }
 }  // namespace jengine::renderer::vulkan

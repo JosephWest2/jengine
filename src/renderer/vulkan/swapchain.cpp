@@ -1,55 +1,112 @@
 #include "swapchain.hpp"
+
 #include <vulkan/vulkan_core.h>
-#include <iostream>
-#include <stdexcept>
-#include "VkBootstrap.h"
+
+#include <algorithm>
+#include <vulkan/vulkan_raii.hpp>
+
 #include "renderer/vulkan/initializers.hpp"
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan {
 
+Swapchain::Swapchain(uint width,
+                     uint height,
+                     vulkan::PhysicalDevice& physical_device,
+                     const vk::raii::Device& device,
+                     const vk::SurfaceKHR& surface)
+    : device(*device) {
+    auto& pd = physical_device.GetPhysicalDevice();
 
-Swapchain::Swapchain(uint width, uint height, VkPhysicalDevice physical_device, VkDevice& device, VkSurfaceKHR surface): device(device) {
+    auto surface_capabilities = pd.getSurfaceCapabilitiesKHR(surface);
+    auto surface_formats = pd.getSurfaceFormatsKHR(surface);
+    auto present_modes = pd.getSurfacePresentModesKHR(surface);
 
-    vkb::SwapchainBuilder swapchain_builder(physical_device, device, surface);
+    surface_format = SelectSurfaceFormat(
+        {.format = vk::Format::eB8G8R8A8Unorm, .colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear}, surface_formats);
+    auto present_mode = SelectPresentMode(vk::PresentModeKHR::eFifo, present_modes);
 
-    swapchain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
+    extent = {
+        .width =
+            std::clamp(width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width),
+        .height =
+            std::clamp(height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height),
+    };
 
-    auto swapchain_res = swapchain_builder
-                             .set_desired_format(VkSurfaceFormatKHR{.format = swapchain_image_format,
-                                                                    .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
-                             .set_desired_present_mode(VkPresentModeKHR::VK_PRESENT_MODE_FIFO_RELAXED_KHR)
-                             .set_desired_extent(width, height)
-                             .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-                             .build();
+    std::vector<uint32_t> queue_family_indices;
+    queue_family_indices.push_back(physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+    if (physical_device.GetPresentQueueIndex(surface) !=
+        physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics)) {
+        queue_family_indices.push_back(physical_device.GetPresentQueueIndex(surface));
 
-    if (!swapchain_res.has_value()) {
-        throw std::runtime_error(std::format("Failed to create Vulkan swapchain: {}", swapchain_res.error().message()));
+        // logic works up till here, but synchronization needs to be implemented for drawing
+        throw std::runtime_error("Present queue family index does not match graphics queue family index, currently unsupported");
     }
 
-    swapchain = swapchain_res->swapchain;
-    extent = swapchain_res->extent;
-    swapchain_images = swapchain_res->get_images().value();
-    swapchain_image_views = swapchain_res->get_image_views().value();
+    vk::SwapchainCreateInfoKHR swapchain_create_info{
+        .surface = surface,
 
-    VkSemaphoreCreateInfo semaphore_create_info = vulkan::init::SemaphoreCreateInfo(0);
-    image_render_finished_semaphores.resize(swapchain_images.size());
+        .minImageCount = std::clamp(surface_capabilities.minImageCount + 1,
+                                    surface_capabilities.minImageCount,
+                                    surface_capabilities.maxImageCount),
+        .imageFormat = surface_format.format,
+        .imageColorSpace = surface_format.colorSpace,
+        .imageExtent = extent,
+        .imageUsage = vk::ImageUsageFlagBits::eTransferDst,
+        .imageSharingMode =
+            queue_family_indices.size() == 1 ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
 
-    for (size_t i = 0; i < swapchain_images.size(); i++) {
-        if (vkCreateSemaphore(device, &semaphore_create_info, nullptr, &image_render_finished_semaphores[i]) !=
-            VK_SUCCESS) {
-            throw std::runtime_error("Failed to create render finished semaphore");
-        }
+        .queueFamilyIndexCount = static_cast<uint32_t>(queue_family_indices.size()),
+        .pQueueFamilyIndices = queue_family_indices.data(),
+
+        .preTransform = surface_capabilities.currentTransform,
+        .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+
+        .presentMode = present_mode,
+    };
+
+    swapchain = device.createSwapchainKHR(swapchain_create_info);
+
+    for (auto& image : images) {
+        vk::ImageViewCreateInfo image_view_create_info =
+            init::ImageViewCreateInfo(image, surface_format.format, vk::ImageAspectFlagBits::eColor);
+        image_views.push_back(vk::raii::ImageView(device, image_view_create_info));
+        image_render_finished_semaphores.push_back(vk::raii::Semaphore(device, {}));
     }
 };
 
-Swapchain::~Swapchain() {
-    std::cout << "Destroying swapchain" << std::endl;
-    for (auto view : swapchain_image_views) {
-        vkDestroyImageView(device, view, nullptr);
+vk::SurfaceFormatKHR Swapchain::SelectSurfaceFormat(vk::SurfaceFormatKHR preferred,
+                                                    std::vector<vk::SurfaceFormatKHR> const& available_formats) {
+    std::optional<size_t> format_match_index = std::nullopt;
+    std::optional<size_t> color_match_index = std::nullopt;
+    for (size_t i = 0; i < available_formats.size(); i++) {
+        auto& sf = available_formats[i];
+        if (sf.format == preferred.format) {
+            format_match_index = i;
+        }
+        if (sf.colorSpace == preferred.colorSpace) {
+            color_match_index = i;
+        }
+        if (format_match_index && color_match_index && format_match_index.value() == color_match_index.value()) {
+            return available_formats[format_match_index.value()];
+        }
     }
-    for (auto image_semaphore : image_render_finished_semaphores) {
-        vkDestroySemaphore(device, image_semaphore, nullptr);
+    if (format_match_index) {
+        return available_formats[format_match_index.value()];
     }
-    vkDestroySwapchainKHR(device, swapchain, nullptr);
+    if (color_match_index) {
+        return available_formats[color_match_index.value()];
+    }
+    return available_formats[0];
 }
+vk::PresentModeKHR Swapchain::SelectPresentMode(vk::PresentModeKHR preferred,
+                                                std::vector<vk::PresentModeKHR> const& available_present_modes) {
+    if (std::ranges::any_of(available_present_modes, [&](auto mode) { return mode == preferred; })) {
+        return preferred;
+    }
+    return vk::PresentModeKHR::eFifo;
+}
+
+Swapchain::~Swapchain() { device.destroySwapchainKHR(swapchain); }
+
 }  // namespace jengine::renderer::vulkan

@@ -8,36 +8,39 @@ namespace jengine::renderer::vulkan {
 
 class AllocatedImage {
   public:
-    AllocatedImage(VkExtent3D extent,
-                   VkFormat format,
-                   VkImageUsageFlags usage_flags,
-                   VkDevice& device,
-                   VmaAllocator& allocator);
+    AllocatedImage(const vk::Extent3D& extent,
+                   const vk::Format& format,
+                   const vk::ImageUsageFlags& usage_flags,
+                   const vk::Device& device,
+                   const VmaAllocator& allocator);
     ~AllocatedImage();
 
-    VkImage GetImage() const { return image; }
-    VkImageView GetImageView() const { return image_view; }
-    VkExtent3D GetExtent() const { return extent; }
-    VkFormat GetFormat() const { return format; }
+    vk::Image GetImage() const { return image; }
+    vk::ImageView GetImageView() const { return image_view; }
+    vk::Extent3D GetExtent() const { return extent; }
+    vk::Format GetFormat() const { return format; }
 
   private:
-    VkImage image{};
-    VkImageView image_view{};
+    vk::Image image{};
+    vk::ImageView image_view{};
     VmaAllocation allocation{};
-    VkExtent3D extent{};
-    VkFormat format{};
+    vk::Extent3D extent{};
+    vk::Format format{};
 
     // held for destruction
-    VkDevice& device;
+    vk::Device& device;
     VmaAllocator& allocator;
 };
 
-void TransitionImage(VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
+void TransitionImage(const vk::CommandBuffer& command_buffer,
+                     const vk::Image& image,
+                     const vk::ImageLayout& old_layout,
+                     const vk::ImageLayout& new_layout);
 
-void CopyImageBlit(VkCommandBuffer command_buffer,
-                   VkImage src_image,
-                   VkImage dst_image,
-                   VkExtent2D src_extent,
-                   VkExtent2D dst_extent);
+void CopyImageBlit(const vk::CommandBuffer& command_buffer,
+                   const vk::Image& src_image,
+                   const vk::Image& dst_image,
+                   const vk::Extent2D& src_extent,
+                   const vk::Extent2D& dst_extent);
 
 }  // namespace jengine::renderer::vulkan

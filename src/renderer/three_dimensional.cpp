@@ -8,11 +8,12 @@
 #include <cmath>
 #include <iostream>
 #include <thread>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "imgui.h"
-#include "renderer/vulkan/graphics_queue.hpp"
+#include "renderer/vulkan/debug.hpp"
+#include "renderer/vulkan/frame_in_flight_data.hpp"
 #include "renderer/vulkan/image.hpp"
-#include "renderer/vulkan/immediate_submit.hpp"
 #include "renderer/vulkan/initializers.hpp"
 #include "renderer/vulkan/instance.hpp"
 #include "renderer/vulkan/physical_device.hpp"
@@ -21,25 +22,25 @@
 
 namespace jengine::renderer {
 
-ThreeDimensional::ThreeDimensional(SDL_Window* window, vulkan::Instance& instance)
-    : instance(instance),
+ThreeDimensional::ThreeDimensional(SDL_Window* window, std::string_view app_name)
+    : instance(app_name.data()),
+      debug_messenger(instance.GetInstance()),
+      physical_device(instance.GetInstance()),
+      device(physical_device),
       surface(window, instance.GetInstance()),
-      physical_device(surface.GetSurface(), instance.VkbInstance()),
-      device(physical_device.GetVkbPhysicalDevice()),
       swapchain(GetWindowWidth(window),
                 GetWindowHeight(window),
-                physical_device.GetPhysicalDevice(),
+                physical_device,
                 device.GetDevice(),
                 surface.GetSurface()),
-      graphics_queue(device.GetVkbDevice()),
-      frame_in_flight_data(graphics_queue.GetQueueFamilyIndex(), device.GetDevice()),
-      graphics_queue_2(device.GetVkbDevice()),
-      immediate_submit(device.GetDevice(), graphics_queue_2.GetQueueFamilyIndex()),
+      graphics_queue(physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics), *device.GetDevice()),
+      frame_in_flight_data(physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.GetDevice()),
+      immediate_submit(device.GetDevice(), graphics_queue.GetQueueFamilyIndex()),
       allocator(instance.GetInstance(),
                 device.GetDevice(),
                 physical_device.GetPhysicalDevice(),
                 VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT),
-      draw_image(VkExtent3D{(uint32_t)GetWindowWidth(window), (uint32_t)GetWindowHeight(window), 1},
+      draw_image(vk::Extent3D{(uint32_t)GetWindowWidth(window), (uint32_t)GetWindowHeight(window), 1},
                  VK_FORMAT_R16G16B16A16_SFLOAT,
                  VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -57,7 +58,7 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, vulkan::Instance& instanc
                        draw_image.GetFormat(),
                        descriptor_manager.GetDrawImageDescriptorLayoutPtr()) {}
 
-ThreeDimensional::~ThreeDimensional() { vkDeviceWaitIdle(device.GetDevice()); }
+ThreeDimensional::~ThreeDimensional() { device.GetDevice().waitIdle();}
 
 void ThreeDimensional::DrawFrame() {
     std::cout << "Frame " << frame_counter << std::endl;
@@ -105,7 +106,7 @@ void ThreeDimensional::DrawFrame() {
     auto& swapchain_image = swapchain.GetSwapchainImages()[swapchain_image_index];
     auto& swapchain_image_view = swapchain.GetSwapchainImageViews()[swapchain_image_index];
 
-    VkCommandBuffer& command_buffer = GetCurrentFrameInFlightData().command_buffer;
+    vk::CommandBuffer& command_buffer = GetCurrentFrameInFlightData().command_buffer;
 
     if (vkResetCommandBuffer(command_buffer, 0) != VK_SUCCESS) {
         throw std::runtime_error("Failed to reset command buffer");
@@ -113,7 +114,7 @@ void ThreeDimensional::DrawFrame() {
 
     // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT means the command buffer will be used only for one submit per frame
     // (per reset) it allows vulkan to potentially optimize
-    VkCommandBufferBeginInfo command_buffer_begin_info =
+    vk::CommandBufferBeginInfo command_buffer_begin_info =
         vulkan::init::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     if (vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info) != VK_SUCCESS) {
@@ -126,8 +127,10 @@ void ThreeDimensional::DrawFrame() {
 
     DrawGeometry(command_buffer);
 
-    vulkan::TransitionImage(
-        command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vulkan::TransitionImage(command_buffer,
+                            draw_image.GetImage(),
+                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     vulkan::TransitionImage(
         command_buffer, swapchain_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -150,13 +153,13 @@ void ThreeDimensional::DrawFrame() {
         throw std::runtime_error("Failed to end command buffer");
     }
 
-    VkCommandBufferSubmitInfo command_buffer_submit_info = vulkan::init::CommandBufferSubmitInfo(command_buffer);
-    VkSemaphoreSubmitInfo wait_semaphore_submit_info = vulkan::init::SemaphoreSubmitInfo(
+    vk::CommandBufferSubmitInfo command_buffer_submit_info = vulkan::init::CommandBufferSubmitInfo(command_buffer);
+    vk::SemaphoreSubmitInfo wait_semaphore_submit_info = vulkan::init::SemaphoreSubmitInfo(
         GetCurrentFrameInFlightData().image_available_semaphore, VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT);
-    VkSemaphoreSubmitInfo signal_semaphore_submit_info =
+    vk::SemaphoreSubmitInfo signal_semaphore_submit_info =
         vulkan::init::SemaphoreSubmitInfo(swapchain.GetImageRenderFinishedSemaphores()[swapchain_image_index],
                                           VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
-    VkSubmitInfo2 submit_info = vulkan::init::SubmitInfo2(
+    vk::SubmitInfo2 submit_info = vulkan::init::SubmitInfo2(
         &command_buffer_submit_info, &wait_semaphore_submit_info, &signal_semaphore_submit_info);
 
     if (vkQueueSubmit2(
@@ -165,7 +168,7 @@ void ThreeDimensional::DrawFrame() {
         throw std::runtime_error("Failed to submit queue");
     }
 
-    VkPresentInfoKHR present_info = {};
+    vk::PresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.pNext = nullptr;
     present_info.pSwapchains = swapchain.GetSwapchainPtr();
@@ -185,14 +188,14 @@ void ThreeDimensional::DrawFrame() {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
-void ThreeDimensional::DrawBackground(VkCommandBuffer command_buffer) {
+void ThreeDimensional::DrawBackground(vk::CommandBuffer command_buffer) {
     vulkan::TransitionImage(command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     auto clear_subresource_range = vulkan::init::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
 
     float flash = std::abs(std::sin((float)frame_counter / 100.f));
 
-    VkClearColorValue clear_color = {{0.0f, 0.0f, flash, 1.0f}};
+    vk::ClearColorValue clear_color = {{0.0f, 0.0f, flash, 1.0f}};
 
     vkCmdClearColorImage(
         command_buffer, draw_image.GetImage(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &clear_subresource_range);
@@ -226,17 +229,17 @@ vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {
     return frame_in_flight_data[frame_counter % frame_in_flight_data.Size()];
 }
 
-void ThreeDimensional::DrawGeometry(VkCommandBuffer command_buffer) {
-    VkRenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
+void ThreeDimensional::DrawGeometry(vk::CommandBuffer command_buffer) {
+    vk::RenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
         draw_image.GetImageView(), std::nullopt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    VkRenderingInfo rendering_info = vulkan::init::RenderingInfo(
+    vk::RenderingInfo rendering_info = vulkan::init::RenderingInfo(
         {draw_image.GetExtent().width, draw_image.GetExtent().height}, &color_attachment, nullptr);
 
     vkCmdBeginRendering(command_buffer, &rendering_info);
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_manager.GetTrianglePipeline());
 
-    VkViewport viewport{};
+    vk::Viewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = draw_image.GetExtent().width;
@@ -246,7 +249,7 @@ void ThreeDimensional::DrawGeometry(VkCommandBuffer command_buffer) {
 
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
-    VkRect2D scissor{};
+    vk::Rect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = {draw_image.GetExtent().width, draw_image.GetExtent().height};
 

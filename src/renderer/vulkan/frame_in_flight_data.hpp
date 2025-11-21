@@ -2,79 +2,53 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <iostream>
-#include <stdexcept>
+#include <array>
+#include <vulkan/vulkan_raii.hpp>
 
-#include "renderer/vulkan/initializers.hpp"
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan {
-struct FrameInFlightData {
-    VkCommandPool command_pool;
-    VkCommandBuffer command_buffer;
-    VkSemaphore image_available_semaphore;
-    VkFence render_in_progress_fence;
-};
-
-template <size_t S>
-class FrameInFlightDataContainer {
+class FrameInFlightData {
   public:
-    FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice& device);
-    ~FrameInFlightDataContainer();
+    FrameInFlightData(uint32_t graphics_queue_family_index, const vk::raii::Device& device)
+        : command_pool(device,
+                       vk::CommandPoolCreateInfo{
+                           .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+                           .queueFamilyIndex = graphics_queue_family_index,
+                       }),
+          image_available_semaphore(device, vk::SemaphoreCreateInfo{}),
+          render_in_progress_fence(device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled}) {
+        auto buffers = device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{
+            .commandPool = command_pool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = 1,
+        });
+        command_buffer = std::move(buffers.front());
+    }
 
-    FrameInFlightData& operator[](size_t index) { return frame_in_flight_data[index]; }
-
-    constexpr size_t Size() const { return S; }
+    vk::CommandBuffer& GetCommandBuffer() { return command_buffer; }
+    vk::raii::Semaphore& GetImageAvailableSemaphore() { return image_available_semaphore; }
+    vk::raii::Fence& GetRenderInProgressFence() { return render_in_progress_fence; }
+    vk::raii::CommandPool& GetCommandPool() { return command_pool; }
 
   private:
-    FrameInFlightData frame_in_flight_data[S];
-
-    // held for destruction
-    VkDevice& device;
+    vk::raii::CommandPool command_pool;
+    vk::CommandBuffer command_buffer;
+    vk::raii::Semaphore image_available_semaphore;
+    vk::raii::Fence render_in_progress_fence;
 };
 
-template <size_t S>
-inline FrameInFlightDataContainer<S>::~FrameInFlightDataContainer() {
-    std::cout << "Destroying frame in flight data" << std::endl;
-    for (auto& frame_in_flight_data : frame_in_flight_data) {
-        vkDestroyCommandPool(device, frame_in_flight_data.command_pool, nullptr);
-        vkDestroySemaphore(device, frame_in_flight_data.image_available_semaphore, nullptr);
-        vkDestroyFence(device, frame_in_flight_data.render_in_progress_fence, nullptr);
-    }
-}
-
-template <size_t S>
-FrameInFlightDataContainer<S>::FrameInFlightDataContainer(uint32_t graphics_queue_family_index, VkDevice& device): device(device) {
-    VkCommandPoolCreateInfo command_pool_create_info =
-        init::CommandPoolCreateInfo(graphics_queue_family_index, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
-    VkFenceCreateInfo fence_create_info = init::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
-
-    VkSemaphoreCreateInfo semaphore_create_info = init::SemaphoreCreateInfo(0);
-
-    for (size_t i = 0; i < S; i++) {
-        if (vkCreateCommandPool(device, &command_pool_create_info, nullptr, &frame_in_flight_data[i].command_pool) !=
-            VK_SUCCESS) {
-            throw std::runtime_error("Failed to create command pool");
-        }
-
-        VkCommandBufferAllocateInfo command_buffer_allocate_info =
-            vulkan::init::PrimaryCommandBufferAllocateInfo(frame_in_flight_data[i].command_pool, 1);
-
-        if (vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &frame_in_flight_data[i].command_buffer) !=
-            VK_SUCCESS) {
-            throw std::runtime_error("Failed to allocate command buffer");
-        }
-
-        if (vkCreateSemaphore(
-                device, &semaphore_create_info, nullptr, &frame_in_flight_data[i].image_available_semaphore) !=
-            VK_SUCCESS) {
-            throw std::runtime_error("Failed to create image available semaphore");
-        }
-        if (vkCreateFence(device, &fence_create_info, nullptr, &frame_in_flight_data[i].render_in_progress_fence) !=
-            VK_SUCCESS) {
-            throw std::runtime_error("Failed to create render in process fence");
+template <size_t SIZE>
+class FrameInFlightDataContainer {
+  public:
+    FrameInFlightDataContainer(uint32_t graphics_queue_family_index, const vk::raii::Device& device) {
+        for (size_t i = 0; i < SIZE; i++) {
+            data[i] = FrameInFlightData(graphics_queue_family_index, device);
         }
     }
-}
+    FrameInFlightData& operator[](size_t index) { return data[index]; }
 
+  private:
+    std::array<FrameInFlightData, SIZE> data;
+};
 }  // namespace jengine::renderer::vulkan

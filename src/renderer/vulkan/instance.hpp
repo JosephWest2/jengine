@@ -1,26 +1,28 @@
 #pragma once
 
-#include "VkBootstrap.h"
+#include <vulkan/vulkan_raii.hpp>
 
 namespace jengine::renderer::vulkan {
 
+vk::raii::Instance CreateInstance(vk::raii::Context& context, const char* app_name, bool use_validation_layers = true);
+
 class Instance {
   public:
-      Instance(const char* app_name, bool use_validation_layers);
-      ~Instance();
-      vkb::Instance& VkbInstance() { return vkb_instance; }
-      VkInstance& GetInstance() { return vkb_instance.instance; }
+    Instance(const char* app_name, bool use_validation_layers = true);
+    ~Instance();
 
-      Instance(const Instance&) = delete;
-      Instance& operator=(const Instance&) = delete;
-      Instance(Instance&& other);
-      Instance& operator=(Instance&& other);
+    vk::raii::Instance& GetInstance() { return instance; }
+    vk::raii::Context& GetContext() { return context; }
+    const vk::Instance& GetInstanceHandle() const { return *instance; }
 
+    Instance(const Instance&) = delete;
+    Instance& operator=(const Instance&) = delete;
+    Instance(Instance&&) = delete;
+    Instance& operator=(Instance&&) = delete;
 
-    private:
+  private:
+    vk::raii::Context context;
+    vk::raii::Instance instance;
 
-      vkb::Instance vkb_instance;
-
-      inline static bool vulkan_initialized{false};
 };
-}  // namespace jengine::renderer
+}  // namespace jengine::renderer::vulkan

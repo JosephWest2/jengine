@@ -3,13 +3,14 @@
 #include <vulkan/vulkan_core.h>
 
 #include "vk_mem_alloc.h"
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan {
 class MemoryAllocator {
   public:
-    MemoryAllocator(VkInstance instance,
-                    VkDevice& device,
-                    VkPhysicalDevice physical_device,
+    MemoryAllocator(const vk::Instance& instance,
+                    const vk::Device& device,
+                    const vk::PhysicalDevice& physical_device,
                     VmaAllocatorCreateFlags flags);
     ~MemoryAllocator();
 

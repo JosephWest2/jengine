@@ -1,24 +1,23 @@
 #include "device.hpp"
 
-#include <format>
-#include <iostream>
+#include "renderer/vulkan/physical_device.hpp"
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan {
 
-Device::Device(vkb::PhysicalDevice& physical_device) {
-    vkb::DeviceBuilder device_builder(physical_device);
+Device::Device(vulkan::PhysicalDevice& physical_device) : device(CreateDevice(physical_device)) {}
 
-    auto device_res = device_builder.build();
-    if (!device_res.has_value()) {
-        throw std::runtime_error(std::format("Failed to create Vulkan device: {}", device_res.error().message()));
-    }
+vk::raii::Device Device::CreateDevice(vulkan::PhysicalDevice& physical_device) {
+    vk::DeviceQueueCreateInfo queue_create_info = {
+        .queueFamilyIndex = physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics),
+        .queueCount = 1,
+    };
 
-    vkb_device = device_res.value();
-}
+    vk::DeviceCreateInfo device_create_info{};
+    device_create_info.queueCreateInfoCount = 1;
+    device_create_info.pQueueCreateInfos = &queue_create_info;
 
-Device::~Device() {
-    std::cout << "Destroying Vulkan device" << std::endl;
-    vkb::destroy_device(vkb_device);
+    return vk::raii::Device(physical_device.GetPhysicalDevice(), device_create_info);
 }
 
 }  // namespace jengine::renderer::vulkan

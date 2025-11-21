@@ -4,14 +4,16 @@
 #include <vulkan/vulkan_core.h>
 
 #include <functional>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "SDL3/SDL_video.h"
 #include "renderer/base.hpp"
 #include "renderer/imgui/context.hpp"
+#include "renderer/vulkan/debug.hpp"
 #include "renderer/vulkan/descriptors/manager.hpp"
 #include "renderer/vulkan/device.hpp"
 #include "renderer/vulkan/frame_in_flight_data.hpp"
-#include "renderer/vulkan/graphics_queue.hpp"
+#include "renderer/vulkan/queue.hpp"
 #include "renderer/vulkan/image.hpp"
 #include "renderer/vulkan/immediate_submit.hpp"
 #include "renderer/vulkan/instance.hpp"
@@ -25,7 +27,7 @@ namespace jengine::renderer {
 
 class ThreeDimensional : public Base {
   public:
-    ThreeDimensional(SDL_Window* window, vulkan::Instance& instance);
+    ThreeDimensional(SDL_Window* window, std::string_view app_name);
     ~ThreeDimensional();
 
     ThreeDimensional(const ThreeDimensional&) = delete;
@@ -38,17 +40,17 @@ class ThreeDimensional : public Base {
 
     static constexpr int FRAMES_IN_FLIGHT = 3;
 
-    // instance must outlive the renderer
-    vulkan::Instance& instance;
-
-    vulkan::Surface surface;
+    vulkan::Instance instance;
+    vulkan::DebugMessenger debug_messenger;
     vulkan::PhysicalDevice physical_device;
     vulkan::Device device;
-    vulkan::Swapchain swapchain;
-    vulkan::GraphicsQueue graphics_queue;
-    vulkan::FrameInFlightDataContainer<3> frame_in_flight_data;
 
-    vulkan::GraphicsQueue graphics_queue_2;
+    vulkan::Surface surface;
+    vulkan::Swapchain swapchain;
+    // assumed to also be the present queue
+    vulkan::Queue graphics_queue;
+    vulkan::FrameInFlightDataContainer<FRAMES_IN_FLIGHT> frame_in_flight_data;
+
     vulkan::ImmediateSubmit immediate_submit;
 
     vulkan::MemoryAllocator allocator;
@@ -61,12 +63,14 @@ class ThreeDimensional : public Base {
 
     vulkan::pipelines::Manager pipeline_manager;
 
-    void ImmediateSubmit(std::function<void(VkCommandBuffer command_buffer)>&& function);
+    void ImmediateSubmit(std::function<void(vk::CommandBuffer command_buffer)>&& function);
 
-    void DrawBackground(VkCommandBuffer command_buffer);
-    void DrawGeometry(VkCommandBuffer command_buffer);
+    void DrawBackground(vk::CommandBuffer command_buffer);
+    void DrawGeometry(vk::CommandBuffer command_buffer);
 
     vulkan::FrameInFlightData& GetCurrentFrameInFlightData();
+
+    vk::Queue GetQueue(vk::QueueFlags queue_flags);
 };
 
 }  // namespace jengine::renderer

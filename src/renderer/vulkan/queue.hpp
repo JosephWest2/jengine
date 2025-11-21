@@ -2,18 +2,18 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include "VkBootstrap.h"
+#include <vulkan/vulkan.hpp>
 
 namespace jengine::renderer::vulkan {
-class GraphicsQueue {
+class Queue {
   public:
-    GraphicsQueue(vkb::Device& device);
+    Queue(uint32_t queue_family_index, const vk::Device& device);
 
     VkQueue GetQueue() const { return queue; }
     uint32_t GetQueueFamilyIndex() const { return queue_family_index; }
 
   private:
-    VkQueue queue{};
+    vk::Queue queue{};
     uint32_t queue_family_index{};
 };
 }  // namespace jengine::renderer::vulkan

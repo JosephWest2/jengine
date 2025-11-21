@@ -2,32 +2,22 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <cstdint>
+#include <vulkan/vulkan.hpp>
 #include <optional>
+
 namespace jengine::renderer::vulkan::init {
 
-VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t graphics_queue_family_index, VkCommandPoolCreateFlags flags);
-VkCommandBufferAllocateInfo PrimaryCommandBufferAllocateInfo(VkCommandPool pool, uint32_t count);
-VkFenceCreateInfo FenceCreateInfo(VkFenceCreateFlags flags);
-VkSemaphoreCreateInfo SemaphoreCreateInfo(VkSemaphoreCreateFlags flags);
-VkCommandBufferBeginInfo CommandBufferBeginInfo(VkCommandBufferUsageFlags usage_flags);
-VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspect_mask);
-VkSemaphoreSubmitInfo SemaphoreSubmitInfo(VkSemaphore semaphore, VkPipelineStageFlags stage_flags);
-VkCommandBufferSubmitInfo CommandBufferSubmitInfo(VkCommandBuffer command_buffer);
-VkSubmitInfo2 SubmitInfo2(VkCommandBufferSubmitInfo* command_buffer_submit_info,
-                          VkSemaphoreSubmitInfo* wait_semaphore_submit_info,
-                          VkSemaphoreSubmitInfo* signal_semaphore_submit_info);
-VkImageCreateInfo ImageCreateInfo(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent);
-VkImageViewCreateInfo ImageViewCreateInfo(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
+vk::ImageSubresourceRange ImageSubresourceRange(vk::ImageAspectFlags aspect_mask);
+vk::SubmitInfo2 SubmitInfo2(vk::CommandBufferSubmitInfo* command_buffer_submit_info,
+                          vk::SemaphoreSubmitInfo* wait_semaphore_submit_info,
+                          vk::SemaphoreSubmitInfo* signal_semaphore_submit_info);
+vk::ImageCreateInfo ImageCreateInfo(vk::Format format, vk::ImageUsageFlags usage_flags, vk::Extent3D extent);
+vk::ImageViewCreateInfo ImageViewCreateInfo(vk::Image image, vk::Format format, vk::ImageAspectFlags aspect_flags);
 // if clear_value is set, image will be cleared with the color
-VkRenderingAttachmentInfo RenderingAttachmentInfo(VkImageView image_view,
-                                                  std::optional<VkClearValue> clear_value,
-                                                  VkImageLayout image_layout);
-VkRenderingInfo RenderingInfo(VkExtent2D render_extent,
-                              VkRenderingAttachmentInfo* color_attachment,
-                              VkRenderingAttachmentInfo* depth_attachment);
-VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits stage,
-                                                              VkShaderModule shader_module,
-                                                              const char* entry = "main");
-VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo();
+vk::RenderingAttachmentInfo RenderingAttachmentInfo(vk::ImageView image_view,
+                                                  std::optional<vk::ClearValue> clear_value,
+                                                  vk::ImageLayout image_layout);
+vk::RenderingInfo RenderingInfo(vk::Extent2D render_extent,
+                              vk::RenderingAttachmentInfo* color_attachment,
+                              vk::RenderingAttachmentInfo* depth_attachment);
 }  // namespace jengine::renderer::vulkan::init
