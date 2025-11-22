@@ -8,7 +8,7 @@ namespace jengine::renderer::vulkan::pipelines {
 
 GradientPipeline::GradientPipeline(vk::DescriptorSetLayout* draw_image_descriptor_layout_ptr,
                                                const vk::raii::Device& device)
-    : device(*device) {
+    : gradient_pipeline(nullptr), device(*device) {
     vk::PushConstantRange push_constant_range{
         .stageFlags = vk::ShaderStageFlagBits::eCompute,
         .offset = 0,

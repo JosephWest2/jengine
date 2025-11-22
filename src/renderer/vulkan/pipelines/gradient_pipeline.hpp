@@ -40,13 +40,11 @@ class GradientPipeline {
         }
     }
 
-    
-
   private:
     ComputePushConstants gradient_push_constants{};
     ComputePushConstants sky_push_constants{};
     vk::PipelineLayout pipeline_layout{};
-    vk::Pipeline gradient_pipeline{};
+    vk::raii::Pipeline gradient_pipeline;
     vk::Pipeline sky_pipeline{};
     PipelineType selected_pipeline = PipelineType::GRADIENT;
 
