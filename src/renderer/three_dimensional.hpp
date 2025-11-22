@@ -40,6 +40,8 @@ class ThreeDimensional : public Base {
 
     static constexpr int FRAMES_IN_FLIGHT = 3;
 
+    static constexpr uint64_t TIMEOUT_ONE_SECOND = 1000000000;
+
     vulkan::Instance instance;
     vulkan::DebugMessenger debug_messenger;
     vulkan::PhysicalDevice physical_device;

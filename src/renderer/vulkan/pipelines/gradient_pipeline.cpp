@@ -1,64 +1,45 @@
 #include "gradient_pipeline.hpp"
-#include <vulkan/vulkan_core.h>
 
-#include <stdexcept>
+#include <vulkan/vulkan_core.h>
 
 #include "renderer/vulkan/pipelines/load_shader_module.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
 
-GradientAndSkyPipeline::GradientAndSkyPipeline(VkDescriptorSetLayout* draw_image_descriptor_layout_ptr, VkDevice& device): device(device) {
-    VkPipelineLayoutCreateInfo compute_pipeline_layout_create_info{};
-    compute_pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    compute_pipeline_layout_create_info.pNext = nullptr;
-    compute_pipeline_layout_create_info.pSetLayouts = draw_image_descriptor_layout_ptr;
-    compute_pipeline_layout_create_info.setLayoutCount = 1;
+GradientPipeline::GradientPipeline(vk::DescriptorSetLayout* draw_image_descriptor_layout_ptr,
+                                               const vk::raii::Device& device)
+    : device(*device) {
+    vk::PushConstantRange push_constant_range{
+        .stageFlags = vk::ShaderStageFlagBits::eCompute,
+        .offset = 0,
+        .size = sizeof(ComputePushConstants),
+    };
+    vk::PipelineLayoutCreateInfo compute_pipeline_layout_create_info{.setLayoutCount = 1,
+                                                                     .pSetLayouts = draw_image_descriptor_layout_ptr,
+                                                                     .pushConstantRangeCount = 1,
+                                                                     .pPushConstantRanges = &push_constant_range};
 
-    VkPushConstantRange push_constant_range{};
-    push_constant_range.offset = 0;
-    push_constant_range.size = sizeof(ComputePushConstants);
-    push_constant_range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pipeline_layout = device.createPipelineLayout(compute_pipeline_layout_create_info);
+    vk::raii::ShaderModule sky_shader_module = LoadShaderModule("shaders/sky.comp.spv", device);
 
-    compute_pipeline_layout_create_info.pPushConstantRanges = &push_constant_range;
-    compute_pipeline_layout_create_info.pushConstantRangeCount = 1;
+    vk::raii::ShaderModule gradient_shader_module = LoadShaderModule("shaders/gradient.comp.spv", device);
 
-    if (vkCreatePipelineLayout(device, &compute_pipeline_layout_create_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create pipeline layout");
-    }
-    VkShaderModule sky_shader_module = LoadShaderModule("shaders/sky.comp.spv", device);
-    if (!sky_shader_module) {
-        throw std::runtime_error("Failed to create sky shader module");
-    }
+    vk::PipelineShaderStageCreateInfo gradient_pipeline_shader_stage_create_info{
+        .stage = vk::ShaderStageFlagBits::eCompute,
+        .module = gradient_shader_module,
+        .pName = "main",
+    };
 
-    VkShaderModule compute_shader_module = LoadShaderModule("shaders/gradient_color.comp.spv", device);
-    if (!compute_shader_module) {
-        throw std::runtime_error("Failed to create gradient_color shader module");
-    }
+    vk::ComputePipelineCreateInfo compute_pipeline_create_info{
+        .stage = gradient_pipeline_shader_stage_create_info,
+        .layout = pipeline_layout,
+    };
 
-    VkPipelineShaderStageCreateInfo compute_pipeline_shader_stage_create_info{};
-    compute_pipeline_shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    compute_pipeline_shader_stage_create_info.pNext = nullptr;
-    compute_pipeline_shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    compute_pipeline_shader_stage_create_info.module = compute_shader_module;
-    compute_pipeline_shader_stage_create_info.pName = "main";
-
-    VkComputePipelineCreateInfo compute_pipeline_create_info{};
-    compute_pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    compute_pipeline_create_info.pNext = nullptr;
-    compute_pipeline_create_info.layout = pipeline_layout;
-    compute_pipeline_create_info.stage = compute_pipeline_shader_stage_create_info;
-
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, nullptr, &gradient_pipeline) !=
-        VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute pipeline");
-    }
-
-    vkDestroyShaderModule(device, compute_shader_module, nullptr);
-    vkDestroyShaderModule(device, sky_shader_module, nullptr);
+    gradient_pipeline = device.createComputePipeline(nullptr, compute_pipeline_create_info);
 }
-GradientAndSkyPipeline::~GradientAndSkyPipeline() {
-    vkDestroyPipeline(device, sky_pipeline, nullptr);
-    vkDestroyPipeline(device, gradient_pipeline, nullptr);
-    vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
+GradientPipeline::~GradientPipeline() {
+
+    device.destroyPipeline(gradient_pipeline);
+    device.destroyPipelineLayout(pipeline_layout);
 }
 }  // namespace jengine::renderer::vulkan::pipelines

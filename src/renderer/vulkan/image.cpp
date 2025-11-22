@@ -69,7 +69,7 @@ void CopyImageBlit(const vk::CommandBuffer& command_buffer,
     command_buffer.blitImage2(&blit_image_info);
 }
 AllocatedImage::~AllocatedImage() {
-    vkDestroyImageView(device, image_view, nullptr);
+    device.destroyImageView(image_view);
     vmaDestroyImage(allocator, image, allocation);
 }
 AllocatedImage::AllocatedImage(const vk::Extent3D& extent,
@@ -83,18 +83,20 @@ AllocatedImage::AllocatedImage(const vk::Extent3D& extent,
     allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     allocation_create_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    if (vmaCreateImage(allocator, &image_create_info, &allocation_create_info, &image, &allocation, nullptr) !=
-        VK_SUCCESS) {
+    VkImage result;
+    if (vmaCreateImage(allocator,
+                       &static_cast<VkImageCreateInfo&>(image_create_info),
+                       &allocation_create_info,
+                       &result,
+                       &allocation,
+                       nullptr) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create image");
     }
+    image = result;
 
     vk::ImageViewCreateInfo image_view_create_info =
-        init::ImageViewCreateInfo(image, format, VK_IMAGE_ASPECT_COLOR_BIT);
+        init::ImageViewCreateInfo(image, format, vk::ImageAspectFlagBits::eColor);
 
-    assert(device);
-    assert(image);
-    if (vkCreateImageView(device, &image_view_create_info, nullptr, &image_view) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create image view");
-    }
+    image_view = device.createImageView(image_view_create_info);
 }
 }  // namespace jengine::renderer::vulkan

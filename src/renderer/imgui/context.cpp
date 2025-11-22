@@ -13,34 +13,30 @@
 namespace jengine::renderer::imgui {
 
 Context::Context(SDL_Window* window,
-                 VkDevice& device,
-                 VkInstance instance,
-                 VkPhysicalDevice physical_device,
-                 VkQueue queue,
+                 const vk::Device& device,
+                 const vk::Instance& instance,
+                 const vk::PhysicalDevice& physical_device,
+                 const vk::Queue& queue,
                  uint32_t queue_family_index,
-                 VkFormat* swapchain_format_ptr): device(device) {
-    VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 100},
-                                         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100},
-                                         {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 100},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 100},
-                                         {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 100},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 100},
-                                         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 100},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100},
-                                         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 100},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 100},
-                                         {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 100}};
+                 const vk::Format swapchain_format)
+    : device(device) {
+    constexpr uint32_t POOL_SIZE = 100;
+    vk::DescriptorPoolSize pool_sizes[] = {{vk::DescriptorType::eSampler, POOL_SIZE},
+                                           {vk::DescriptorType::eCombinedImageSampler, POOL_SIZE},
+                                           {vk::DescriptorType::eSampledImage, POOL_SIZE},
+                                           {vk::DescriptorType::eStorageImage, POOL_SIZE},
+                                           {vk::DescriptorType::eUniformTexelBuffer, POOL_SIZE},
+                                           {vk::DescriptorType::eStorageTexelBuffer, POOL_SIZE},
+                                           {vk::DescriptorType::eUniformBuffer, POOL_SIZE},
+                                           {vk::DescriptorType::eStorageBuffer, POOL_SIZE},
+                                           {vk::DescriptorType::eUniformBufferDynamic, POOL_SIZE},
+                                           {vk::DescriptorType::eStorageBufferDynamic, POOL_SIZE},
+                                           {vk::DescriptorType::eInputAttachment, POOL_SIZE}};
 
-    VkDescriptorPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_create_info.maxSets = 100;
-    pool_create_info.poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes));
-    pool_create_info.pPoolSizes = pool_sizes;
+    vk::DescriptorPoolCreateInfo pool_create_info{
+        .maxSets = POOL_SIZE, .poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes)), .pPoolSizes = pool_sizes};
 
-    if (vkCreateDescriptorPool(device, &pool_create_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create imgui descriptor pool");
-    }
+    descriptor_pool = device.createDescriptorPool(pool_create_info);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -49,6 +45,8 @@ Context::Context(SDL_Window* window,
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
     ImGui_ImplSDL3_InitForVulkan(window);
+
+    VkFormat swapchain_format_vk = static_cast<VkFormat>(swapchain_format);
 
     ImGui_ImplVulkan_InitInfo init_info{};
     init_info.Instance = instance;
@@ -64,7 +62,7 @@ Context::Context(SDL_Window* window,
 
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-    init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = swapchain_format_ptr;
+    init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchain_format_vk;
 
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -84,7 +82,7 @@ bool Context::EventFilter(void* user_data __attribute__((unused)), SDL_Event* ev
     }
     return true;
 }
-void Context::NewFrame(std::function<void()> fn) {
+void Context::NewFrame(std::function<void()>&& fn) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -92,19 +90,21 @@ void Context::NewFrame(std::function<void()> fn) {
     ImGui::ShowDemoWindow();
     ImGui::Render();
 }
-void Context::Draw(VkCommandBuffer command_buffer, VkImageView target_image_view, VkExtent2D swapchain_extent) {
-    VkRenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
-        target_image_view, std::nullopt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    VkRenderingInfo rendering_info = vulkan::init::RenderingInfo(swapchain_extent, &color_attachment, nullptr);
+void Context::Draw(const vk::CommandBuffer& command_buffer,
+                   const vk::ImageView& target_image_view,
+                   const vk::Extent2D& swapchain_extent) {
+    vk::RenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
+        target_image_view, std::nullopt, vk::ImageLayout::eColorAttachmentOptimal);
+    vk::RenderingInfo rendering_info = vulkan::init::RenderingInfo(swapchain_extent, &color_attachment, nullptr);
 
-    vkCmdBeginRendering(command_buffer, &rendering_info);
+    command_buffer.beginRendering(rendering_info);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
-    vkCmdEndRendering(command_buffer);
+    command_buffer.endRendering();
 }
 Context::~Context() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
-    vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
+    device.destroyDescriptorPool(descriptor_pool);
 }
 }  // namespace jengine::renderer::imgui

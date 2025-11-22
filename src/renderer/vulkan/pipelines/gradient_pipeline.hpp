@@ -4,10 +4,12 @@
 
 #include <glm/glm.hpp>
 #include <string>
+#include <vulkan/vulkan_raii.hpp>
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
 
-class GradientAndSkyPipeline {
+class GradientPipeline {
   public:
     struct ComputePushConstants {
         glm::vec4 data1;
@@ -17,11 +19,11 @@ class GradientAndSkyPipeline {
     };
 
     enum class PipelineType { GRADIENT, SKY };
-    GradientAndSkyPipeline(VkDescriptorSetLayout* draw_image_descriptor_layout_ptr, VkDevice& device);
-    ~GradientAndSkyPipeline();
+    GradientPipeline(vk::DescriptorSetLayout* draw_image_descriptor_layout_ptr, const vk::raii::Device& device);
+    ~GradientPipeline();
 
-    VkPipelineLayout GetPipelineLayout() const { return pipeline_layout; }
-    VkPipeline GetGradientPipeline() const { return gradient_pipeline; }
+    vk::PipelineLayout GetPipelineLayout() const { return pipeline_layout; }
+    vk::Pipeline GetGradientPipeline() const { return gradient_pipeline; }
 
     ComputePushConstants& SkyPushConstants() {
         return sky_push_constants;
@@ -43,12 +45,12 @@ class GradientAndSkyPipeline {
   private:
     ComputePushConstants gradient_push_constants{};
     ComputePushConstants sky_push_constants{};
-    VkPipelineLayout pipeline_layout{};
-    VkPipeline gradient_pipeline{};
-    VkPipeline sky_pipeline{};
+    vk::PipelineLayout pipeline_layout{};
+    vk::Pipeline gradient_pipeline{};
+    vk::Pipeline sky_pipeline{};
     PipelineType selected_pipeline = PipelineType::GRADIENT;
 
     // held for destruction
-    VkDevice& device;
+    const vk::Device& device;
 };
 }  // namespace jengine::renderer::vulkan::pipelines

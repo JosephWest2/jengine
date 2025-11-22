@@ -1,36 +1,35 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include <vector>
+
 namespace jengine::renderer::vulkan::pipelines {
 class GraphicsPipelineBuilder {
   public:
-    GraphicsPipelineBuilder();
-
-    std::vector<VkPipelineShaderStageCreateInfo> shader_stages{};
-
-    VkPipelineInputAssemblyStateCreateInfo input_assembly_info{};
-    VkPipelineRasterizationStateCreateInfo rasterization_info{};
-    VkPipelineMultisampleStateCreateInfo multisample_info{};
-    VkPipelineColorBlendAttachmentState color_blend_attachment_state{};
-    VkPipelineLayout pipeline_layout{};
-    VkPipelineDepthStencilStateCreateInfo depth_stencil_info{};
-    VkPipelineRenderingCreateInfo rendering_info{};
-    VkFormat color_attachment_format{};
+    std::vector<vk::PipelineShaderStageCreateInfo> shader_stages{};
+    vk::PipelineInputAssemblyStateCreateInfo input_assembly_info{};
+    vk::PipelineRasterizationStateCreateInfo rasterization_info{};
+    vk::PipelineMultisampleStateCreateInfo multisample_info{};
+    vk::PipelineColorBlendAttachmentState color_blend_attachment_state{};
+    vk::PipelineLayout pipeline_layout{};
+    vk::PipelineDepthStencilStateCreateInfo depth_stencil_info{};
+    vk::PipelineRenderingCreateInfo rendering_info{};
+    vk::Format color_attachment_format{};
 
     void Reset();
 
-    void SetShaders(VkShaderModule vertex_shader, VkShaderModule fragment_shader);
-    void SetInputTopology(VkPrimitiveTopology topology);
-    void SetPolygonMode(VkPolygonMode polygon_mode);
-    void SetCullMode(VkCullModeFlags cull_mode_flags, VkFrontFace front_face);
-    void SetMultisampling(VkSampleCountFlagBits msaa_samples);
+    void SetShaders(const vk::ShaderModule& vertex_shader, const vk::ShaderModule& fragment_shader);
+    void SetInputTopology(vk::PrimitiveTopology&& topology);
+    void SetPolygonMode(vk::PolygonMode&& polygon_mode);
+    void SetCullMode(vk::CullModeFlags&& cull_mode_flags, vk::FrontFace&& front_face);
+    void SetMultisampling(vk::SampleCountFlagBits&& msaa_samples);
     void DisableBlending();
-    void SetColorAttachmentFormat(VkFormat attachment_format);
-    void SetDepthFormat(VkFormat format);
+    void SetColorAttachmentFormat(vk::Format attachment_format);
+    void SetDepthFormat(vk::Format format);
     void DisableDepthTest();
-    VkPipeline Build(VkDevice device);
+    vk::Pipeline Build(const vk::Device& device);
 
   private:
 };

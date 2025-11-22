@@ -2,30 +2,29 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <initializer_list>
-#include <span>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
 namespace jengine::renderer::vulkan::descriptors {
 class DescriptorAllocator {
   public:
     struct PoolSizeRatio {
-        VkDescriptorType type{};
+        vk::DescriptorType type{};
         float ratio{};
     };
 
-    DescriptorAllocator(VkDevice& device, uint32_t max_sets, std::initializer_list<PoolSizeRatio> pool_size_ratios);
+    DescriptorAllocator(const vk::Device& device,
+                        uint32_t max_sets,
+                        const vk::ArrayProxy<PoolSizeRatio> pool_size_ratios);
     ~DescriptorAllocator();
 
-    void InitPool(uint32_t max_sets, const std::span<PoolSizeRatio> pool_size_ratios);
-    void ClearDescriptors();
+    void ClearDescriptors() const;
 
-    VkDescriptorSet Allocate(VkDescriptorSetLayout layout);
+    vk::DescriptorSet Allocate(const vk::DescriptorSetLayout& layout) const;
 
   private:
-    bool initialized = false;
-    VkDescriptorPool pool{};
+    vk::DescriptorPool pool;
 
-    // held for destruction
-    VkDevice& device;
+    const vk::Device& device;
 };
 }  // namespace jengine::renderer::vulkan::descriptors

@@ -6,21 +6,20 @@ namespace jengine::renderer::vulkan::descriptors {
 
 class DrawImageDescriptors {
   public:
-    DrawImageDescriptors(DescriptorAllocator& allocator, VkDevice& device, VkImageView draw_image_view);
+    DrawImageDescriptors(const DescriptorAllocator& allocator, vk::Device& device, vk::ImageView draw_image_view);
     ~DrawImageDescriptors();
 
-    VkDescriptorSet GetDescriptorSet() const { return descriptor_set; }
-    VkDescriptorSet* GetDescriptorSetPtr() { return &descriptor_set; }
-    VkDescriptorSetLayout GetLayout() const { return descriptor_set_layout; }
-    VkDescriptorSetLayout* GetLayoutPtr() { return &descriptor_set_layout; }
-
+    const vk::DescriptorSet& GetDescriptorSet() const { return descriptor_set; }
+    vk::DescriptorSet* GetDescriptorSetPtr() { return &descriptor_set; }
+    const vk::DescriptorSetLayout& GetLayout() const { return descriptor_set_layout; }
+    vk::DescriptorSetLayout* GetLayoutPtr() { return &descriptor_set_layout; }
 
   private:
-    VkDescriptorSet descriptor_set{};
-    VkDescriptorSetLayout descriptor_set_layout{};
+    vk::DescriptorSet descriptor_set{};
+    vk::DescriptorSetLayout descriptor_set_layout{};
     static constexpr int MAX_DESCRIPTOR_SETS = 10;
 
     // held for destruction
-    VkDevice& device;
+    vk::Device& device;
 };
 }  // namespace jengine::renderer::vulkan

@@ -22,7 +22,7 @@ ImmediateSubmit::ImmediateSubmit(const vk::raii::Device& device, uint32_t graphi
 void ImmediateSubmit::Submit(const vk::Device& device,
                              const vk::Queue& queue,
                              std::function<void(vk::CommandBuffer)>&& function) {
-    if (device.waitForFences(1, &(*fence), true, 1000000000) != vk::Result::eSuccess) {
+    if (device.waitForFences(1, &(*fence), true, TIMEOUT_ONE_SECOND) != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to wait for immediate submit fence");
     }
     if (device.resetFences(1, &(*fence)) != vk::Result::eSuccess) {
@@ -46,7 +46,7 @@ void ImmediateSubmit::Submit(const vk::Device& device,
         throw std::runtime_error("Failed to submit immediate submit command buffer");
     }
 
-    if (device.waitForFences(1, &(*fence), true, 1000000000) != vk::Result::eSuccess) {
+    if (device.waitForFences(1, &(*fence), true, TIMEOUT_ONE_SECOND) != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to wait for immediate submit fence");
     }
 }

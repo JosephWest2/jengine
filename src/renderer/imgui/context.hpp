@@ -5,27 +5,28 @@
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_video.h"
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::imgui {
 class Context {
   public:
     Context(SDL_Window* window,
-            VkDevice& device,
-            VkInstance instance,
-            VkPhysicalDevice physical_device,
-            VkQueue queue,
+            const vk::Device& device,
+            const vk::Instance& instance,
+            const vk::PhysicalDevice& physical_device,
+            const vk::Queue& queue,
             uint32_t queue_family_index,
-            VkFormat* swapchain_format_ptr);
+            const vk::Format swapchain_format);
     ~Context();
-    void NewFrame(std::function<void()> fn);
-    void Draw(VkCommandBuffer command_buffer, VkImageView target_image_view, VkExtent2D swapchain_extent);
+    void NewFrame(std::function<void()>&& fn);
+    void Draw(const vk::CommandBuffer& command_buffer, const vk::ImageView& target_image_view, const vk::Extent2D& swapchain_extent);
 
   private:
     static bool EventFilter(void* user_data, SDL_Event* event);
 
-    VkDescriptorPool descriptor_pool{};
+    vk::DescriptorPool descriptor_pool{};
 
     // held for destruction
-    VkDevice& device;
+    const vk::Device& device;
 };
 };  // namespace jengine::renderer::imgui

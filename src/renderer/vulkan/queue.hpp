@@ -9,7 +9,7 @@ class Queue {
   public:
     Queue(uint32_t queue_family_index, const vk::Device& device);
 
-    VkQueue GetQueue() const { return queue; }
+    vk::Queue& GetQueue() { return queue; }
     uint32_t GetQueueFamilyIndex() const { return queue_family_index; }
 
   private:

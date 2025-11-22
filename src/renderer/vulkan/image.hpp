@@ -2,6 +2,7 @@
 
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "renderer/vulkan/memory_allocator.hpp"
 namespace jengine::renderer::vulkan {
@@ -15,10 +16,10 @@ class AllocatedImage {
                    const VmaAllocator& allocator);
     ~AllocatedImage();
 
-    vk::Image GetImage() const { return image; }
-    vk::ImageView GetImageView() const { return image_view; }
-    vk::Extent3D GetExtent() const { return extent; }
-    vk::Format GetFormat() const { return format; }
+    vk::Image& GetImage() { return image; }
+    vk::ImageView& GetImageView() { return image_view; }
+    vk::Extent3D& GetExtent() { return extent; }
+    vk::Format& GetFormat() { return format; }
 
   private:
     vk::Image image{};
@@ -27,9 +28,8 @@ class AllocatedImage {
     vk::Extent3D extent{};
     vk::Format format{};
 
-    // held for destruction
-    vk::Device& device;
-    VmaAllocator& allocator;
+    const vk::Device& device;
+    const VmaAllocator& allocator;
 };
 
 void TransitionImage(const vk::CommandBuffer& command_buffer,

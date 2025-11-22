@@ -13,6 +13,9 @@ class ImmediateSubmit {
     void Submit(const vk::Device& device, const vk::Queue& queue, std::function<void(vk::CommandBuffer)>&& function);
 
   private:
+
+    static constexpr uint64_t TIMEOUT_ONE_SECOND = 1000000000;
+
     vk::raii::CommandPool command_pool;
     vk::raii::Fence fence;
     vk::CommandBuffer command_buffer;

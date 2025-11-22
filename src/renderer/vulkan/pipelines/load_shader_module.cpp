@@ -2,16 +2,17 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include <format>
 #include <fstream>
 #include <vector>
 
 namespace jengine::renderer::vulkan::pipelines {
 
-VkShaderModule LoadShaderModule(const char* file_path, VkDevice device) {
+vk::raii::ShaderModule LoadShaderModule(const char* file_path, const vk::raii::Device& device) {
     std::ifstream file(file_path, std::ios::ate | std::ios::binary);
 
     if (!file) {
-        return nullptr;
+        throw std::runtime_error(std::format("Failed to open file: {}", file_path));
     }
 
     size_t file_size = static_cast<size_t>(file.tellg());
@@ -23,17 +24,7 @@ VkShaderModule LoadShaderModule(const char* file_path, VkDevice device) {
 
     file.close();
 
-    VkShaderModuleCreateInfo create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    create_info.pNext = nullptr;
-    create_info.codeSize = file_size;
-    create_info.pCode = buffer.data();
-
-    VkShaderModule result{};
-    if (vkCreateShaderModule(device, &create_info, nullptr, &result) != VK_SUCCESS) {
-        return nullptr;
-    }
-    return result;
+    return device.createShaderModule({.codeSize = file_size, .pCode = buffer.data()});
 }
 
-}  // namespace jengine::renderer::vulkan
+}  // namespace jengine::renderer::vulkan::pipelines
