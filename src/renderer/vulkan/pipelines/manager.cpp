@@ -2,22 +2,36 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <stdexcept>
-
-#include "renderer/vulkan/pipelines/graphics_pipeline_builder.hpp"
-#include "renderer/vulkan/pipelines/load_shader_module.hpp"
+#include "renderer/vulkan/pipelines/gradient_pipeline.hpp"
+#include "renderer/vulkan/pipelines/shared_compute_pipeline_layout.hpp"
+#include "util/should_be_unreachable.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
 
-Manager::Manager(const vk::Device& device, vk::Format draw_image_format, vk::DescriptorSetLayout* draw_image_descriptor_layout_ptr)
-    : gradient_and_sky_pipeline(draw_image_descriptor_layout_ptr, device), device(device) {}
+Manager::Manager(const vk::raii::Device& device,
+                 vk::Format draw_image_format,
+                 const vk::DescriptorSetLayout* draw_image_descriptor_layout)
+    : shared_compute_pipeline_layout(device, draw_image_descriptor_layout),
+      gradient_pipeline(device, shared_compute_pipeline_layout.GetPipelineLayout()),
+      sky_pipeline(device, shared_compute_pipeline_layout.GetPipelineLayout()),
+      triangle_pipeline(device, draw_image_format) {}
 
-Manager::~Manager() {
-    if (triangle_pipeline) {
-        vkDestroyPipeline(device, triangle_pipeline, nullptr);
+const vk::Pipeline& Manager::GetSelectedSharedComputePipeline() const {
+    switch (selected_shared_compute_pipeline) {
+        case SelectedSharedComputePipeline::GRADIENT:
+            return gradient_pipeline.GetPipeline();
+        case SelectedSharedComputePipeline::SKY:
+            return sky_pipeline.GetPipeline();
     }
-    if (triangle_pipeline_layout) {
-        vkDestroyPipelineLayout(device, triangle_pipeline_layout, nullptr);
+    util::should_be_unreachable();
+}
+const std::string_view Manager::GetSelectedSharedComputePipelineName() const {
+    switch (selected_shared_compute_pipeline) {
+        case SelectedSharedComputePipeline::GRADIENT:
+            return "gradient";
+        case SelectedSharedComputePipeline::SKY:
+            return "sky";
     }
+    util::should_be_unreachable();
 }
 }  // namespace jengine::renderer::vulkan::pipelines

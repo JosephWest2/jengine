@@ -25,7 +25,7 @@ vk::raii::PhysicalDevice PhysicalDevice::CreatePhysicalDevice(vk::raii::Instance
     }
     return device_scores.rbegin()->second;
 }
-std::optional<uint32_t> PhysicalDevice::GetPhysicalDeviceQueueFamilyIndex(vk::raii::PhysicalDevice& physical_device,
+std::optional<uint32_t> PhysicalDevice::GetPhysicalDeviceQueueFamilyIndex(const vk::raii::PhysicalDevice& physical_device,
                                                                           vk::QueueFlagBits queue_flags) {
     const auto queues = physical_device.getQueueFamilyProperties();
     for (size_t i = 0; i < queues.size(); i++) {

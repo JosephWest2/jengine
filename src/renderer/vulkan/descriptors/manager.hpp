@@ -8,9 +8,9 @@
 namespace jengine::renderer::vulkan::descriptors {
 class Manager {
   public:
-    Manager(const vk::Device& device, const vk::ImageView& draw_image_view);
+    Manager(const vk::raii::Device& device, const vk::ImageView& draw_image_view);
     vk::DescriptorSet* GetDrawImageDescriptorSetPtr() { return draw_image_descriptors.GetDescriptorSetPtr(); }
-    vk::DescriptorSetLayout* GetDrawImageDescriptorLayoutPtr() { return draw_image_descriptors.GetLayoutPtr(); }
+    const vk::DescriptorSetLayout* GetDrawImageDescriptorLayoutPtr() { return draw_image_descriptors.GetLayoutPtr(); }
 
   private:
     DescriptorAllocator global_allocator;

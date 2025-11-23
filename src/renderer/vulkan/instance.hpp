@@ -9,7 +9,6 @@ vk::raii::Instance CreateInstance(vk::raii::Context& context, const char* app_na
 class Instance {
   public:
     Instance(const char* app_name, bool use_validation_layers = true);
-    ~Instance();
 
     vk::raii::Instance& GetInstance() { return instance; }
     vk::raii::Context& GetContext() { return context; }

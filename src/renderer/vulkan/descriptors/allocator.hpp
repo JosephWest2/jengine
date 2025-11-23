@@ -13,18 +13,17 @@ class DescriptorAllocator {
         float ratio{};
     };
 
-    DescriptorAllocator(const vk::Device& device,
+    DescriptorAllocator(const vk::raii::Device& device,
                         uint32_t max_sets,
                         const vk::ArrayProxy<PoolSizeRatio> pool_size_ratios);
-    ~DescriptorAllocator();
 
     void ClearDescriptors() const;
 
     vk::DescriptorSet Allocate(const vk::DescriptorSetLayout& layout) const;
 
   private:
-    vk::DescriptorPool pool;
+    vk::raii::DescriptorPool pool;
 
-    const vk::Device& device;
+    const vk::raii::Device& device;
 };
 }  // namespace jengine::renderer::vulkan::descriptors

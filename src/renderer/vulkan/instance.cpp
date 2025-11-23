@@ -24,13 +24,15 @@ bool LayersAvailable(std::vector<const char*> validation_layers) {
 
     std::vector<VkLayerProperties> layers(layer_count);
     vkEnumerateInstanceLayerProperties(&layer_count, layers.data());
-    return std::ranges::all_of(layers, [&](VkLayerProperties const& layer) {
-        if (!std::ranges::contains(validation_layers, layer.layerName)) {
-            std::cerr << "Validation layer not avaialble: " << layer.layerName << std::endl;
+    for (auto& validation_layer : validation_layers) {
+        bool found = std::ranges::any_of(
+            layers, [&](const auto& layer) { return strcmp(layer.layerName, validation_layer) == 1; });
+        if (!found) {
+            std::cerr << "Requested validation layer not available: " << validation_layer << std::endl;
             return false;
         }
-        return true;
-    });
+    }
+    return true;
 }
 
 vk::raii::Instance CreateInstance(vk::raii::Context& context, const char* app_name, bool use_validation_layers) {

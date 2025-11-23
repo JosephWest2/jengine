@@ -10,7 +10,7 @@ namespace jengine::renderer::vulkan {
 class Device {
   public:
     Device(vulkan::PhysicalDevice& physical_device);
-    vk::raii::Device& GetDevice() { return device; }
+    const vk::raii::Device& GetDevice() { return device; }
     const vk::Device& GetDeviceHandle() { return *device; }
 
     void WaitIdle() { device.waitIdle(); }

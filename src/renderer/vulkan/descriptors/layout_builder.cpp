@@ -9,7 +9,7 @@ void DescriptorLayoutBuilder::AddBinding(uint32_t binding, vk::DescriptorType ty
     });
 }
 void DescriptorLayoutBuilder::Clear() { bindings.clear(); }
-vk::DescriptorSetLayout DescriptorLayoutBuilder::Build(vk::Device device,
+vk::raii::DescriptorSetLayout DescriptorLayoutBuilder::Build(const vk::raii::Device& device,
                                                        vk::ShaderStageFlags shader_stage_flags,
                                                        void* pnext,
                                                        vk::DescriptorSetLayoutCreateFlags flags) {

@@ -19,7 +19,7 @@ class AllocatedImage {
     vk::Image& GetImage() { return image; }
     vk::ImageView& GetImageView() { return image_view; }
     vk::Extent3D& GetExtent() { return extent; }
-    vk::Format& GetFormat() { return format; }
+    vk::Format GetFormat() { return format; }
 
   private:
     vk::Image image{};

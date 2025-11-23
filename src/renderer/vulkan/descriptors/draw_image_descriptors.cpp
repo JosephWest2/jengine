@@ -5,9 +5,9 @@
 namespace jengine::renderer::vulkan::descriptors {
 
 DrawImageDescriptors::DrawImageDescriptors(const DescriptorAllocator& allocator,
-                                           vk::Device& device,
-                                           vk::ImageView draw_image_view)
-    : device(device) {
+                                           const vk::raii::Device& device,
+                                           vk::ImageView draw_image_view) : descriptor_set_layout(nullptr)
+    {
     DescriptorLayoutBuilder layout_builder{};
     layout_builder.AddBinding(0, vk::DescriptorType::eStorageImage);
     descriptor_set_layout = layout_builder.Build(device, vk::ShaderStageFlagBits::eCompute);
@@ -26,5 +26,4 @@ DrawImageDescriptors::DrawImageDescriptors(const DescriptorAllocator& allocator,
     };
     device.updateDescriptorSets({draw_image_write}, {});
 }
-DrawImageDescriptors::~DrawImageDescriptors() { vkDestroyDescriptorSetLayout(device, descriptor_set_layout, nullptr); }
 }  // namespace jengine::renderer::vulkan::descriptors

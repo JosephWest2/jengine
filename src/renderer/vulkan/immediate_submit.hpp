@@ -8,7 +8,6 @@ namespace jengine::renderer::vulkan {
 class ImmediateSubmit {
   public:
     ImmediateSubmit(const vk::raii::Device& device, uint32_t graphics_queue_family_index);
-    ~ImmediateSubmit();
 
     void Submit(const vk::Device& device, const vk::Queue& queue, std::function<void(vk::CommandBuffer)>&& function);
 

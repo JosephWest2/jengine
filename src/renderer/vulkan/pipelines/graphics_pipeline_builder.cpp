@@ -1,12 +1,13 @@
 #include "graphics_pipeline_builder.hpp"
 
 #include <vulkan/vulkan_core.h>
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
 
 void GraphicsPipelineBuilder::Reset() { *this = GraphicsPipelineBuilder(); }
 
-vk::Pipeline GraphicsPipelineBuilder::Build(const vk::Device& device) {
+vk::raii::Pipeline GraphicsPipelineBuilder::Build(const vk::raii::Device& device) {
     vk::PipelineViewportStateCreateInfo viewport_state{
         .viewportCount = 1,
         .scissorCount = 1,
@@ -42,11 +43,7 @@ vk::Pipeline GraphicsPipelineBuilder::Build(const vk::Device& device) {
         .layout = pipeline_layout,
     };
 
-    auto result = device.createGraphicsPipeline(nullptr, pipeline_create_info);
-    if (!result.has_value()) {
-        throw std::runtime_error("Failed to create graphics pipeline");
-    }
-    return result.value;
+    return device.createGraphicsPipeline(nullptr, pipeline_create_info);
 }
 void GraphicsPipelineBuilder::SetShaders(const vk::ShaderModule& vertex_shader, const vk::ShaderModule& fragment_shader) {
     shader_stages.clear();
@@ -90,8 +87,8 @@ void GraphicsPipelineBuilder::DisableDepthTest() {
     depth_stencil_info.depthCompareOp = vk::CompareOp::eNever;
     depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
     depth_stencil_info.stencilTestEnable = VK_FALSE;
-    depth_stencil_info.front = {};
-    depth_stencil_info.back = {};
+    depth_stencil_info.front = vk::StencilOpState();
+    depth_stencil_info.back = vk::StencilOpState();
     depth_stencil_info.minDepthBounds = 0.0f;
     depth_stencil_info.maxDepthBounds = 1.0f;
 }

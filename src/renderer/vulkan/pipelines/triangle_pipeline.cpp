@@ -5,7 +5,7 @@
 
 namespace jengine::renderer::vulkan::pipelines {
 TrianglePipeline::TrianglePipeline(const vk::raii::Device& device, const vk::Format& draw_image_format)
-    : device(*device) {
+    : pipeline(nullptr) {
     vk::raii::ShaderModule fragment_shader = LoadShaderModule("shaders/colored_triangle.frag.spv", device);
     vk::raii::ShaderModule vertex_shader = LoadShaderModule("shaders/colored_triangle.vert.spv", device);
 
@@ -23,10 +23,5 @@ TrianglePipeline::TrianglePipeline(const vk::raii::Device& device, const vk::For
     pipeline_builder.DisableBlending();
     pipeline_builder.DisableDepthTest();
     pipeline = pipeline_builder.Build(device);
-}
-TrianglePipeline::~TrianglePipeline() {
-    if (pipeline) {
-        device.destroyPipeline(pipeline);
-    }
 }
 }  // namespace jengine::renderer::vulkan::pipelines

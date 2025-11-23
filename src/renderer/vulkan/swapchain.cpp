@@ -15,7 +15,7 @@ Swapchain::Swapchain(uint width,
                      vulkan::PhysicalDevice& physical_device,
                      const vk::raii::Device& device,
                      const vk::SurfaceKHR& surface)
-    : device(*device) {
+    : swapchain(nullptr) {
     auto& pd = physical_device.GetPhysicalDevice();
 
     auto surface_capabilities = pd.getSurfaceCapabilitiesKHR(surface);
@@ -26,7 +26,7 @@ Swapchain::Swapchain(uint width,
         {.format = vk::Format::eB8G8R8A8Unorm, .colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear}, surface_formats);
     auto present_mode = SelectPresentMode(vk::PresentModeKHR::eFifo, present_modes);
 
-    extent = {
+    extent = vk::Extent2D{
         .width =
             std::clamp(width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width),
         .height =
@@ -40,7 +40,8 @@ Swapchain::Swapchain(uint width,
         queue_family_indices.push_back(physical_device.GetPresentQueueIndex(surface));
 
         // logic works up till here, but synchronization needs to be implemented for drawing
-        throw std::runtime_error("Present queue family index does not match graphics queue family index, currently unsupported");
+        throw std::runtime_error(
+            "Present queue family index does not match graphics queue family index, currently unsupported");
     }
 
     vk::SwapchainCreateInfoKHR swapchain_create_info{
@@ -70,7 +71,7 @@ Swapchain::Swapchain(uint width,
     for (auto& image : images) {
         vk::ImageViewCreateInfo image_view_create_info =
             init::ImageViewCreateInfo(image, surface_format.format, vk::ImageAspectFlagBits::eColor);
-        image_views.push_back(vk::raii::ImageView(device, image_view_create_info));
+        image_views.push_back(device.createImageView(image_view_create_info));
         image_render_finished_semaphores.push_back(vk::raii::Semaphore(device, {}));
     }
 };
@@ -106,7 +107,5 @@ vk::PresentModeKHR Swapchain::SelectPresentMode(vk::PresentModeKHR preferred,
     }
     return vk::PresentModeKHR::eFifo;
 }
-
-Swapchain::~Swapchain() { device.destroySwapchainKHR(swapchain); }
 
 }  // namespace jengine::renderer::vulkan

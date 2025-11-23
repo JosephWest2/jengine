@@ -17,7 +17,6 @@
 #include "renderer/vulkan/initializers.hpp"
 #include "renderer/vulkan/instance.hpp"
 #include "renderer/vulkan/physical_device.hpp"
-#include "renderer/vulkan/pipelines/gradient_pipeline.hpp"
 #include "vulkan/vulkan.hpp"
 #include "window.hpp"
 
@@ -66,23 +65,27 @@ void ThreeDimensional::DrawFrame() {
 
     // imgui setup
     imgui_context.NewFrame([this]() {
-        auto pipeline_name = pipeline_manager.GetGradientAndSkyPipeline().SelectedPipelineString();
+        auto pipeline_name = pipeline_manager.GetSelectedSharedComputePipelineName();
 
-        ImGui::Text("Selected pipeline: %s", pipeline_name.c_str());
+        ImGui::Text("Selected pipeline: %s", pipeline_name.data());
 
-        ImGui::InputFloat4("sky1", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data1);
-        ImGui::InputFloat4("sky2", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data2);
-        ImGui::InputFloat4("sky3", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data3);
-        ImGui::InputFloat4("sky4", (float*)&pipeline_manager.GetGradientAndSkyPipeline().SkyPushConstants().data4);
+        if (ImGui::Button("Select Sky")) {
+            pipeline_manager.SetSelectedSharedComputePipeline(
+                vulkan::pipelines::Manager::SelectedSharedComputePipeline::SKY);
+        }
+        if (ImGui::Button("Select Gradient")) {
+            pipeline_manager.SetSelectedSharedComputePipeline(
+                vulkan::pipelines::Manager::SelectedSharedComputePipeline::GRADIENT);
+        }
 
-        ImGui::InputFloat4("gradient1",
-                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data1);
-        ImGui::InputFloat4("gradient2",
-                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data2);
-        ImGui::InputFloat4("gradient3",
-                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data3);
-        ImGui::InputFloat4("gradient4",
-                           (float*)&pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants().data4);
+        ImGui::InputFloat4("ComputePushConstant1",
+                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data1);
+        ImGui::InputFloat4("ComputePushConstant2",
+                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data2);
+        ImGui::InputFloat4("ComputePushConstant3",
+                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data3);
+        ImGui::InputFloat4("ComputePushConstant4",
+                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data4);
     });
 
     device.WaitIdle();
@@ -179,35 +182,29 @@ void ThreeDimensional::DrawBackground(vk::CommandBuffer command_buffer) {
 
     float flash = std::abs(std::sin((float)frame_counter / 100.f));
 
-    vk::ClearColorValue clear_color{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}};
+    vk::ClearColorValue clear_color{std::array<float, 4>{0.0f, 0.0f, flash, 1.0f}};
 
     command_buffer.clearColorImage(
         draw_image.GetImage(), vk::ImageLayout::eGeneral, clear_color, clear_subresource_range);
 
-    command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute,
-                                pipeline_manager.GetGradientAndSkyPipeline().GetGradientPipeline());
+    command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline_manager.GetSelectedSharedComputePipeline());
 
-    command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline_manager.GetGradientAndSkyPipeline().GetPipelineLayout(), 0, )
-    vkCmdBindDescriptorSets(command_buffer,
-                            VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipeline_manager.GetGradientAndSkyPipeline().GetPipelineLayout(),
-                            0,
-                            1,
-                            descriptor_manager.GetDrawImageDescriptorSetPtr(),
-                            0,
-                            nullptr);
+    command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,
+                                      pipeline_manager.GetSharedComputePipelineLayout().GetPipelineLayout(),
+                                      0,
+                                      1,
+                                      descriptor_manager.GetDrawImageDescriptorSetPtr(),
+                                      0,
+                                      nullptr);
 
-    vkCmdPushConstants(command_buffer,
-                       pipeline_manager.GetGradientAndSkyPipeline().GetPipelineLayout(),
-                       VK_SHADER_STAGE_COMPUTE_BIT,
-                       0,
-                       sizeof(vulkan::pipelines::GradientPipeline::ComputePushConstants),
-                       &pipeline_manager.GetGradientAndSkyPipeline().GradientPushConstants());
+    auto push_constants_vec = pipeline_manager.GetSharedComputePipelineLayout().GetPushConstantsVec();
+    command_buffer.pushConstants(pipeline_manager.GetSharedComputePipelineLayout().GetPipelineLayout(),
+                                 vk::ShaderStageFlagBits::eCompute,
+                                 0,
+                                 vk::ArrayProxy<const glm::vec4>{push_constants_vec});
 
-    vkCmdDispatch(command_buffer,
-                  std::ceil(draw_image.GetExtent().width / 16.f),
-                  std::ceil(draw_image.GetExtent().height / 16.f),
-                  1);
+    command_buffer.dispatch(
+        std::ceil(draw_image.GetExtent().width / 16.f), std::ceil(draw_image.GetExtent().height / 16.f), 1);
 }
 
 vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {
@@ -216,32 +213,34 @@ vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {
 
 void ThreeDimensional::DrawGeometry(vk::CommandBuffer command_buffer) {
     vk::RenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
-        draw_image.GetImageView(), std::nullopt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        draw_image.GetImageView(), std::nullopt, vk::ImageLayout::eColorAttachmentOptimal);
     vk::RenderingInfo rendering_info = vulkan::init::RenderingInfo(
         {draw_image.GetExtent().width, draw_image.GetExtent().height}, &color_attachment, nullptr);
 
-    vkCmdBeginRendering(command_buffer, &rendering_info);
+    command_buffer.beginRendering(rendering_info);
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_manager.GetTrianglePipeline());
+    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_manager.GetTrianglePipeline());
 
-    vk::Viewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = draw_image.GetExtent().width;
-    viewport.height = draw_image.GetExtent().height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    vk::Viewport viewport{
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(draw_image.GetExtent().width),
+        .height = static_cast<float>(draw_image.GetExtent().height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
 
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    command_buffer.setViewport(0, 1, &viewport);
 
-    vk::Rect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = {draw_image.GetExtent().width, draw_image.GetExtent().height};
+    vk::Rect2D scissor{
+        .offset = {0, 0},
+        .extent = {draw_image.GetExtent().width, draw_image.GetExtent().height},
+    };
 
-    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+    command_buffer.setScissor(0, 1, &scissor);
 
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    command_buffer.draw(3, 1, 0, 0);
 
-    vkCmdEndRendering(command_buffer);
+    command_buffer.endRendering();
 }
 }  // namespace jengine::renderer

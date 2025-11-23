@@ -53,8 +53,8 @@ void CopyImageBlit(const vk::CommandBuffer& command_buffer,
             },
 
     };
-    image_blit.srcOffsets[1] = {static_cast<int>(src_extent.width), static_cast<int>(src_extent.height), 1};
-    image_blit.dstOffsets[1] = {static_cast<int>(dst_extent.width), static_cast<int>(dst_extent.height), 1};
+    image_blit.srcOffsets[1] = vk::Offset3D{static_cast<int>(src_extent.width), static_cast<int>(src_extent.height), 1};
+    image_blit.dstOffsets[1] = vk::Offset3D{static_cast<int>(dst_extent.width), static_cast<int>(dst_extent.height), 1};
 
     vk::BlitImageInfo2 blit_image_info{
         .srcImage = src_image,

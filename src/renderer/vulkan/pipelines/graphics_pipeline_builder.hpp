@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include <vector>
+#include <vulkan/vulkan_raii.hpp>
 
 namespace jengine::renderer::vulkan::pipelines {
 class GraphicsPipelineBuilder {
@@ -29,7 +30,7 @@ class GraphicsPipelineBuilder {
     void SetColorAttachmentFormat(vk::Format attachment_format);
     void SetDepthFormat(vk::Format format);
     void DisableDepthTest();
-    vk::Pipeline Build(const vk::Device& device);
+    vk::raii::Pipeline Build(const vk::raii::Device& device);
 
   private:
 };

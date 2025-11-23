@@ -74,30 +74,35 @@ target_link_libraries(vma_impl PUBLIC VulkanMemoryAllocator)
 
 add_library(${PROJECT_NAME} 
     src/renderer/two_dimensional.cpp
-    src/renderer/vulkan/graphics_queue.cpp
-    src/renderer/vulkan/physical_device.cpp
-    src/renderer/vulkan/instance.cpp
-    src/renderer/vulkan/initializers.cpp
-    src/renderer/vulkan/compute_queue.cpp
-    src/renderer/vulkan/image.cpp
-    src/renderer/vulkan/descriptors/allocator.cpp
-    src/renderer/vulkan/descriptors/layout_builder.cpp
-    src/renderer/vulkan/descriptors/draw_image_descriptors.cpp
     src/renderer/vulkan/descriptors/manager.cpp
+    src/renderer/vulkan/descriptors/layout_builder.cpp
+    src/renderer/vulkan/descriptors/allocator.cpp
+    src/renderer/vulkan/descriptors/draw_image_descriptors.cpp
     src/renderer/vulkan/pipelines/load_shader_module.cpp
+    src/renderer/vulkan/frame_in_flight_data.cpp
+    src/renderer/vulkan/pipelines/shared_compute_pipeline_layout.cpp
+    src/renderer/vulkan/pipelines/sky_pipeline.cpp
     src/renderer/vulkan/pipelines/gradient_pipeline.cpp
+    src/renderer/vulkan/pipelines/triangle_pipeline.cpp
+    src/renderer/vulkan/pipelines/graphics_pipeline_builder.cpp
     src/renderer/vulkan/pipelines/manager.cpp
-    src/renderer/vulkan/surface.cpp
     src/renderer/vulkan/deletion_stack.cpp
-    src/renderer/vulkan/swapchain.cpp
+    src/renderer/vulkan/instance.cpp
+    src/renderer/vulkan/debug.cpp
+    src/renderer/vulkan/physical_device.cpp
     src/renderer/vulkan/device.cpp
+    src/renderer/vulkan/queue.cpp
+    src/renderer/vulkan/initializers.cpp
     src/renderer/vulkan/memory_allocator.cpp
+    src/renderer/vulkan/image.cpp
     src/renderer/vulkan/immediate_submit.cpp
+    src/renderer/vulkan/surface.cpp
+    src/renderer/vulkan/swapchain.cpp
     src/renderer/imgui/context.cpp
     src/renderer/three_dimensional.cpp
-    src/renderer/vulkan/pipelines/graphics_pipeline_builder.cpp
-    src/window.cpp
+    src/util/should_be_unreachable.cpp
     src/engine.cpp
+    src/window.cpp
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -113,7 +118,7 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC glm::glm
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE VULKAN_HPP_NO_CONSTRUCTORS)
+target_compile_definitions(${PROJECT_NAME} PRIVATE VULKAN_HPP_NO_CONSTRUCTORS PRIVATE VULKAN_HPP_NO_STRUCT_CONSTRUCTORS)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4>

@@ -5,7 +5,7 @@ int main() {
     jengine::Engine engine;
     jengine::Window window("Hello World", 800, 600, jengine::WindowType::VULKAN, true);
     jengine::renderer::vulkan::Instance instance("jengine", true);
-    jengine::renderer::ThreeDimensional renderer(window.SDL(), instance);
+    jengine::renderer::ThreeDimensional renderer(window.SDL(), "jengine renderer test");
     window.SetRenderer(&renderer);
     engine.AddWindow(std::move(window));
     engine.Run();

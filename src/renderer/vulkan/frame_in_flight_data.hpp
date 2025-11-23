@@ -10,21 +10,7 @@
 namespace jengine::renderer::vulkan {
 class FrameInFlightData {
   public:
-    FrameInFlightData(uint32_t graphics_queue_family_index, const vk::raii::Device& device)
-        : command_pool(device,
-                       vk::CommandPoolCreateInfo{
-                           .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-                           .queueFamilyIndex = graphics_queue_family_index,
-                       }),
-          image_available_semaphore(device, vk::SemaphoreCreateInfo{}),
-          render_in_progress_fence(device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled}) {
-        auto buffers = device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{
-            .commandPool = command_pool,
-            .level = vk::CommandBufferLevel::ePrimary,
-            .commandBufferCount = 1,
-        });
-        command_buffer = std::move(buffers.front());
-    }
+    FrameInFlightData(uint32_t graphics_queue_family_index, const vk::raii::Device& device);
 
     vk::CommandBuffer& GetCommandBuffer() { return command_buffer; }
     vk::raii::Semaphore& GetImageAvailableSemaphore() { return image_available_semaphore; }
@@ -46,9 +32,10 @@ class FrameInFlightDataContainer {
             data[i] = FrameInFlightData(graphics_queue_family_index, device);
         }
     }
-    FrameInFlightData& operator[](size_t index) { return data[index]; }
+    FrameInFlightData& operator[](size_t index) { return data[index].value(); }
+    constexpr size_t Size() { return SIZE; }
 
   private:
-    std::array<FrameInFlightData, SIZE> data;
+    std::array<std::optional<FrameInFlightData>, SIZE> data;
 };
 }  // namespace jengine::renderer::vulkan
