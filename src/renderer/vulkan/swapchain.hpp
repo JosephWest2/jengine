@@ -26,7 +26,7 @@ class Swapchain {
         return image_render_finished_semaphores;
     }
     const std::vector<vk::Image>& GetSwapchainImages() const { return images; }
-    const std::vector<vk::raii::ImageView>& GetSwapchainImageViews() const { return swapchain_image_views; }
+    const std::vector<vk::raii::ImageView>& GetSwapchainImageViews() const { return image_views; }
     const vk::Extent2D& GetExtent() const { return extent; }
 
   private:
@@ -36,7 +36,6 @@ class Swapchain {
     std::vector<vk::Image> images{};
     std::vector<vk::raii::ImageView> image_views{};
     std::vector<vk::raii::Semaphore> image_render_finished_semaphores{};
-    std::vector<vk::raii::ImageView> swapchain_image_views{};
 
     static vk::SurfaceFormatKHR SelectSurfaceFormat(vk::SurfaceFormatKHR preferred,
                                                     std::vector<vk::SurfaceFormatKHR> const& available_formats);

@@ -19,11 +19,9 @@ class DescriptorAllocator {
 
     void ClearDescriptors() const;
 
-    vk::DescriptorSet Allocate(const vk::DescriptorSetLayout& layout) const;
+    vk::DescriptorSet Allocate(const vk::Device& device, const vk::DescriptorSetLayout& layout) const;
 
   private:
     vk::raii::DescriptorPool pool;
-
-    const vk::raii::Device& device;
 };
 }  // namespace jengine::renderer::vulkan::descriptors

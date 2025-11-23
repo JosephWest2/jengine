@@ -8,7 +8,7 @@ namespace jengine::renderer::vulkan::descriptors {
 DescriptorAllocator::DescriptorAllocator(const vk::raii::Device& device,
                                          uint32_t max_sets,
                                          const vk::ArrayProxy<PoolSizeRatio> pool_size_ratios)
-    : pool(nullptr), device(device) {
+    : pool(nullptr) {
     std::vector<vk::DescriptorPoolSize> pool_sizes{};
     for (auto& ratio : pool_size_ratios) {
         pool_sizes.push_back({
@@ -22,7 +22,7 @@ DescriptorAllocator::DescriptorAllocator(const vk::raii::Device& device,
         .pPoolSizes = pool_sizes.data(),
     });
 }
-vk::DescriptorSet DescriptorAllocator::Allocate(const vk::DescriptorSetLayout& layout) const {
+vk::DescriptorSet DescriptorAllocator::Allocate(const vk::Device& device, const vk::DescriptorSetLayout& layout) const {
     auto sets = device.allocateDescriptorSets({
         .descriptorPool = pool,
         .descriptorSetCount = 1,

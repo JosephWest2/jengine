@@ -12,16 +12,16 @@ class FrameInFlightData {
   public:
     FrameInFlightData(uint32_t graphics_queue_family_index, const vk::raii::Device& device);
 
-    vk::CommandBuffer& GetCommandBuffer() { return command_buffer; }
-    vk::raii::Semaphore& GetImageAvailableSemaphore() { return image_available_semaphore; }
-    vk::raii::Fence& GetRenderInProgressFence() { return render_in_progress_fence; }
-    vk::raii::CommandPool& GetCommandPool() { return command_pool; }
+    const vk::CommandBuffer& GetCommandBuffer() { return *command_buffer; }
+    const vk::Semaphore& GetImageAvailableSemaphore() { return *image_available_semaphore; }
+    const vk::Fence& GetRenderInProgressFence() { return *render_in_progress_fence; }
+    const vk::CommandPool& GetCommandPool() { return *command_pool; }
 
   private:
     vk::raii::CommandPool command_pool;
-    vk::CommandBuffer command_buffer;
     vk::raii::Semaphore image_available_semaphore;
     vk::raii::Fence render_in_progress_fence;
+    vk::raii::CommandBuffer command_buffer;
 };
 
 template <size_t SIZE>
@@ -32,7 +32,15 @@ class FrameInFlightDataContainer {
             data[i] = FrameInFlightData(graphics_queue_family_index, device);
         }
     }
-    FrameInFlightData& operator[](size_t index) { return data[index].value(); }
+    FrameInFlightData& operator[](size_t index) {
+        if (index >= SIZE) {
+            throw std::out_of_range("Index out of range");
+        }
+        if (!data[index].has_value()) {
+            throw std::runtime_error("Frame in flight data not initialized");
+        }
+        return data[index].value();
+    }
     constexpr size_t Size() { return SIZE; }
 
   private:

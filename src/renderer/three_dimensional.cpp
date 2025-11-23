@@ -92,10 +92,12 @@ void ThreeDimensional::DrawFrame() {
     device.WaitForFences({GetCurrentFrameInFlightData().GetRenderInProgressFence()});
     device.ResetFences({GetCurrentFrameInFlightData().GetRenderInProgressFence()});
 
+    std::cout << "DEBUG IMAGE AVAILABLE SEM" << GetCurrentFrameInFlightData().GetImageAvailableSemaphore() << std::endl;
     auto result = device.GetDevice().acquireNextImage2KHR(vk::AcquireNextImageInfoKHR{
         .swapchain = swapchain.GetSwapchain(),
         .timeout = TIMEOUT_ONE_SECOND,
         .semaphore = GetCurrentFrameInFlightData().GetImageAvailableSemaphore(),
+        .deviceMask = 1,
     });
     if (!result.has_value()) {
         throw std::runtime_error("Failed to acquire next image");
@@ -105,7 +107,7 @@ void ThreeDimensional::DrawFrame() {
     auto& swapchain_image = swapchain.GetSwapchainImages()[swapchain_image_index];
     auto& swapchain_image_view = swapchain.GetSwapchainImageViews()[swapchain_image_index];
 
-    vk::CommandBuffer& command_buffer = GetCurrentFrameInFlightData().GetCommandBuffer();
+    const vk::CommandBuffer& command_buffer = GetCurrentFrameInFlightData().GetCommandBuffer();
 
     command_buffer.reset();
 

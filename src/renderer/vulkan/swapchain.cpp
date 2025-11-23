@@ -44,8 +44,9 @@ Swapchain::Swapchain(uint width,
             "Present queue family index does not match graphics queue family index, currently unsupported");
     }
 
+    VkSurfaceKHR s = surface;
     vk::SwapchainCreateInfoKHR swapchain_create_info{
-        .surface = surface,
+        .surface = s,
 
         .minImageCount = std::clamp(surface_capabilities.minImageCount + 1,
                                     surface_capabilities.minImageCount,
@@ -53,7 +54,8 @@ Swapchain::Swapchain(uint width,
         .imageFormat = surface_format.format,
         .imageColorSpace = surface_format.colorSpace,
         .imageExtent = extent,
-        .imageUsage = vk::ImageUsageFlagBits::eTransferDst,
+        .imageArrayLayers = 1,
+        .imageUsage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment,
         .imageSharingMode =
             queue_family_indices.size() == 1 ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
 
@@ -67,6 +69,7 @@ Swapchain::Swapchain(uint width,
     };
 
     swapchain = device.createSwapchainKHR(swapchain_create_info);
+    images = swapchain.getImages();
 
     for (auto& image : images) {
         vk::ImageViewCreateInfo image_view_create_info =

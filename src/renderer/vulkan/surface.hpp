@@ -12,7 +12,7 @@ class Surface {
     Surface(SDL_Window* window, const vk::Instance& instance);
     ~Surface();
 
-    vk::SurfaceKHR GetSurface() const { return surface; }
+    vk::SurfaceKHR& GetSurface() { return surface; }
 
   private:
     vk::SurfaceKHR surface;

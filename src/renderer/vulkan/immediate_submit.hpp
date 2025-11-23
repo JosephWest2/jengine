@@ -9,7 +9,7 @@ class ImmediateSubmit {
   public:
     ImmediateSubmit(const vk::raii::Device& device, uint32_t graphics_queue_family_index);
 
-    void Submit(const vk::Device& device, const vk::Queue& queue, std::function<void(vk::CommandBuffer)>&& function);
+    void Submit(const vk::Device& device, const vk::Queue& queue, std::function<void(vk::CommandBuffer&)>&& function);
 
   private:
 
