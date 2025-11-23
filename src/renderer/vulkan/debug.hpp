@@ -8,7 +8,7 @@ namespace jengine::renderer::vulkan {
 
 class DebugMessenger {
   public:
-    DebugMessenger(vk::raii::Instance& instance);
+    DebugMessenger(const vk::raii::Instance& instance);
 
     vk::raii::DebugUtilsMessengerEXT& GetDebugMessenger() { return debug_messenger; }
 
@@ -16,11 +16,10 @@ class DebugMessenger {
     vk::raii::DebugUtilsMessengerEXT debug_messenger;
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT message_severity,
-                                             vk::DebugUtilsMessageTypeFlagsEXT message_type __attribute__((unused)),
-                                             const vk::DebugUtilsMessengerCallbackDataEXT* callback_data,
-                                             void* user_data __attribute__((unused)));
-
-    static vk::raii::DebugUtilsMessengerEXT CreateDebugUtilsMessenger(vk::raii::Instance& instance);
+                                                        vk::DebugUtilsMessageTypeFlagsEXT message_type
+                                                        __attribute__((unused)),
+                                                        const vk::DebugUtilsMessengerCallbackDataEXT* callback_data,
+                                                        void* user_data __attribute__((unused)));
 };
 
 }  // namespace jengine::renderer::vulkan

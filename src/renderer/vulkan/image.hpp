@@ -12,23 +12,22 @@ class AllocatedImage {
     AllocatedImage(const vk::Extent3D& extent,
                    const vk::Format& format,
                    const vk::ImageUsageFlags& usage_flags,
-                   const vk::Device& device,
+                   const vk::raii::Device& device,
                    const VmaAllocator& allocator);
     ~AllocatedImage();
 
-    vk::Image& GetImage() { return image; }
-    vk::ImageView& GetImageView() { return image_view; }
-    vk::Extent3D& GetExtent() { return extent; }
+    const vk::Image& GetImage() const { return image; }
+    const vk::ImageView& GetImageView() const { return *image_view; }
+    vk::Extent3D GetExtent() { return extent; }
     vk::Format GetFormat() { return format; }
 
   private:
     vk::Image image{};
-    vk::ImageView image_view{};
+    vk::raii::ImageView image_view;
     VmaAllocation allocation{};
     vk::Extent3D extent{};
     vk::Format format{};
 
-    const vk::Device& device;
     const VmaAllocator& allocator;
 };
 

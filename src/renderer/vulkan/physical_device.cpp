@@ -8,9 +8,7 @@
 
 namespace jengine::renderer::vulkan {
 
-PhysicalDevice::PhysicalDevice(vk::raii::Instance& instance) : physical_device(CreatePhysicalDevice(instance)) {}
-
-vk::raii::PhysicalDevice PhysicalDevice::CreatePhysicalDevice(vk::raii::Instance& instance) {
+PhysicalDevice::PhysicalDevice(const vk::raii::Instance& instance) : physical_device(nullptr) {
     std::multimap<int, vk::raii::PhysicalDevice> device_scores;
     for (const auto& physical_device : instance.enumeratePhysicalDevices()) {
         int score = 0;
@@ -23,8 +21,9 @@ vk::raii::PhysicalDevice PhysicalDevice::CreatePhysicalDevice(vk::raii::Instance
         }
         device_scores.insert({score, physical_device});
     }
-    return device_scores.rbegin()->second;
+    physical_device = std::move(device_scores.rbegin()->second);
 }
+
 std::optional<uint32_t> PhysicalDevice::GetPhysicalDeviceQueueFamilyIndex(const vk::raii::PhysicalDevice& physical_device,
                                                                           vk::QueueFlagBits queue_flags) {
     const auto queues = physical_device.getQueueFamilyProperties();
@@ -51,7 +50,7 @@ uint32_t PhysicalDevice::GetPresentQueueIndex(const vk::SurfaceKHR& surface) {
     }
     const auto queues = physical_device.getQueueFamilyProperties();
     for (size_t i = 0; i < queues.size(); i++) {
-        if (physical_device.getSurfaceSupportKHR(i, surface)) {
+        if (physical_device.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface)) {
             present_index_cache[surface] = static_cast<uint32_t>(i);
             return static_cast<uint32_t>(i);
         }

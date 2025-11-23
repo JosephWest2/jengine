@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan_core.h>
 #include <functional>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_video.h"
@@ -11,7 +12,7 @@ namespace jengine::renderer::imgui {
 class Context {
   public:
     Context(SDL_Window* window,
-            const vk::Device& device,
+            const vk::raii::Device& device,
             const vk::Instance& instance,
             const vk::PhysicalDevice& physical_device,
             const vk::Queue& queue,
@@ -24,9 +25,7 @@ class Context {
   private:
     static bool EventFilter(void* user_data, SDL_Event* event);
 
-    vk::DescriptorPool descriptor_pool{};
+    vk::raii::DescriptorPool descriptor_pool;
 
-    // held for destruction
-    const vk::Device& device;
 };
 };  // namespace jengine::renderer::imgui

@@ -9,7 +9,7 @@ TrianglePipeline::TrianglePipeline(const vk::raii::Device& device, const vk::For
     vk::raii::ShaderModule fragment_shader = LoadShaderModule("shaders/colored_triangle.frag.spv", device);
     vk::raii::ShaderModule vertex_shader = LoadShaderModule("shaders/colored_triangle.vert.spv", device);
 
-    vk::raii::PipelineLayout triangle_pipeline_layout = device.createPipelineLayout({});
+    vk::raii::PipelineLayout triangle_pipeline_layout = device.createPipelineLayout(vk::PipelineLayoutCreateInfo{});
 
     GraphicsPipelineBuilder pipeline_builder{};
     pipeline_builder.pipeline_layout = triangle_pipeline_layout;

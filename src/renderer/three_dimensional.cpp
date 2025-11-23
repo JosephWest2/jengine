@@ -27,13 +27,13 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, std::string_view app_name
       debug_messenger(instance.GetInstance()),
       physical_device(instance.GetInstance()),
       device(physical_device),
-      surface(window, instance.GetInstance()),
+      surface(window, *instance.GetInstance()),
       swapchain(GetWindowWidth(window),
                 GetWindowHeight(window),
                 physical_device,
                 device.GetDevice(),
                 surface.GetSurface()),
-      graphics_queue(physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics), *device.GetDevice()),
+      graphics_queue(physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.GetDevice()),
       frame_in_flight_data(physical_device.GetQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.GetDevice()),
       immediate_submit(device.GetDevice(), graphics_queue.GetQueueFamilyIndex()),
       allocator(instance.GetInstance(),
@@ -92,7 +92,6 @@ void ThreeDimensional::DrawFrame() {
     device.WaitForFences({GetCurrentFrameInFlightData().GetRenderInProgressFence()});
     device.ResetFences({GetCurrentFrameInFlightData().GetRenderInProgressFence()});
 
-    std::cout << "DEBUG IMAGE AVAILABLE SEM" << GetCurrentFrameInFlightData().GetImageAvailableSemaphore() << std::endl;
     auto result = device.GetDevice().acquireNextImage2KHR(vk::AcquireNextImageInfoKHR{
         .swapchain = swapchain.GetSwapchain(),
         .timeout = TIMEOUT_ONE_SECOND,
@@ -104,8 +103,8 @@ void ThreeDimensional::DrawFrame() {
     }
     uint32_t swapchain_image_index = result.value;
 
-    auto& swapchain_image = swapchain.GetSwapchainImages()[swapchain_image_index];
-    auto& swapchain_image_view = swapchain.GetSwapchainImageViews()[swapchain_image_index];
+    auto& swapchain_image = swapchain.GetImage(swapchain_image_index);
+    auto& swapchain_image_view = swapchain.GetImageView(swapchain_image_index);
 
     const vk::CommandBuffer& command_buffer = GetCurrentFrameInFlightData().GetCommandBuffer();
 
@@ -150,7 +149,7 @@ void ThreeDimensional::DrawFrame() {
         .semaphore = GetCurrentFrameInFlightData().GetImageAvailableSemaphore(),
         .stageMask = vk::PipelineStageFlagBits2::eAllGraphics};
     vk::SemaphoreSubmitInfo signal_semaphore_submit_info{
-        .semaphore = swapchain.GetImageRenderFinishedSemaphores()[swapchain_image_index],
+        .semaphore = swapchain.GetImageRenderFinishedSemaphore(swapchain_image_index),
         .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
     };
     vk::SubmitInfo2 submit_info = vulkan::init::SubmitInfo2(
@@ -160,7 +159,7 @@ void ThreeDimensional::DrawFrame() {
 
     vk::PresentInfoKHR present_info{
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &*swapchain.GetImageRenderFinishedSemaphores()[swapchain_image_index],
+        .pWaitSemaphores = &swapchain.GetImageRenderFinishedSemaphore(swapchain_image_index),
         .swapchainCount = 1,
         .pSwapchains = swapchain.GetSwapchainPtr(),
         .pImageIndices = &swapchain_image_index,
@@ -205,8 +204,9 @@ void ThreeDimensional::DrawBackground(vk::CommandBuffer command_buffer) {
                                  0,
                                  vk::ArrayProxy<const glm::vec4>{push_constants_vec});
 
-    command_buffer.dispatch(
-        std::ceil(draw_image.GetExtent().width / 16.f), std::ceil(draw_image.GetExtent().height / 16.f), 1);
+    command_buffer.dispatch((uint32_t)std::ceil((float)draw_image.GetExtent().width / 16.f),
+                            (uint32_t)std::ceil((float)draw_image.GetExtent().height / 16.f),
+                            1);
 }
 
 vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {

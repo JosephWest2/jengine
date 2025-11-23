@@ -3,8 +3,7 @@
 #include <iostream>
 
 namespace jengine::renderer::vulkan {
-DebugMessenger::DebugMessenger(vk::raii::Instance& instance) : debug_messenger(CreateDebugUtilsMessenger(instance)) {}
-vk::raii::DebugUtilsMessengerEXT DebugMessenger::CreateDebugUtilsMessenger(vk::raii::Instance& instance) {
+DebugMessenger::DebugMessenger(const vk::raii::Instance& instance) : debug_messenger(nullptr) {
     vk::DebugUtilsMessengerCreateInfoEXT create_info = {
         .messageSeverity =
             vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
@@ -14,7 +13,7 @@ vk::raii::DebugUtilsMessengerEXT DebugMessenger::CreateDebugUtilsMessenger(vk::r
         .pUserData = nullptr,
     };
 
-    return vk::raii::DebugUtilsMessengerEXT(instance, create_info);
+    debug_messenger = vk::raii::DebugUtilsMessengerEXT(instance, create_info);
 }
 VkBool32 VKAPI_CALL DebugMessenger::DebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT message_severity,
                                                   vk::DebugUtilsMessageTypeFlagsEXT message_type

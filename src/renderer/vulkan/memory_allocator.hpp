@@ -1,16 +1,16 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "vk_mem_alloc.h"
-#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan {
 class MemoryAllocator {
   public:
-    MemoryAllocator(const vk::Instance& instance,
-                    const vk::Device& device,
-                    const vk::PhysicalDevice& physical_device,
+    MemoryAllocator(const vk::raii::Instance& instance,
+                    const vk::raii::Device& device,
+                    const vk::raii::PhysicalDevice& physical_device,
                     VmaAllocatorCreateFlags flags);
     ~MemoryAllocator();
 

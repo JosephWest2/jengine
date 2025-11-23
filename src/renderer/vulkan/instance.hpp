@@ -10,8 +10,8 @@ class Instance {
   public:
     Instance(const char* app_name, bool use_validation_layers = true);
 
-    vk::raii::Instance& GetInstance() { return instance; }
-    vk::raii::Context& GetContext() { return context; }
+    const vk::raii::Instance& GetInstance() const { return instance; }
+    const vk::raii::Context& GetContext() const { return context; }
     const vk::Instance& GetInstanceHandle() const { return *instance; }
 
     Instance(const Instance&) = delete;

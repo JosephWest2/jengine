@@ -16,7 +16,7 @@ Swapchain::Swapchain(uint width,
                      const vk::raii::Device& device,
                      const vk::SurfaceKHR& surface)
     : swapchain(nullptr) {
-    auto& pd = physical_device.GetPhysicalDevice();
+    const auto& pd = physical_device.GetPhysicalDevice();
 
     auto surface_capabilities = pd.getSurfaceCapabilitiesKHR(surface);
     auto surface_formats = pd.getSurfaceFormatsKHR(surface);
@@ -75,7 +75,7 @@ Swapchain::Swapchain(uint width,
         vk::ImageViewCreateInfo image_view_create_info =
             init::ImageViewCreateInfo(image, surface_format.format, vk::ImageAspectFlagBits::eColor);
         image_views.push_back(device.createImageView(image_view_create_info));
-        image_render_finished_semaphores.push_back(vk::raii::Semaphore(device, {}));
+        image_render_finished_semaphores.push_back(vk::raii::Semaphore(device, vk::SemaphoreCreateInfo{}));
     }
 };
 

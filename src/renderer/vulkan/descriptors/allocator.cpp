@@ -13,7 +13,7 @@ DescriptorAllocator::DescriptorAllocator(const vk::raii::Device& device,
     for (auto& ratio : pool_size_ratios) {
         pool_sizes.push_back({
             .type = ratio.type,
-            .descriptorCount = static_cast<uint32_t>(max_sets * ratio.ratio),
+            .descriptorCount = static_cast<uint32_t>(static_cast<float>(max_sets) * ratio.ratio),
         });
     }
     pool = device.createDescriptorPool({

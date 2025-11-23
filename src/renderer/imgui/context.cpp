@@ -13,13 +13,13 @@
 namespace jengine::renderer::imgui {
 
 Context::Context(SDL_Window* window,
-                 const vk::Device& device,
+                 const vk::raii::Device& device,
                  const vk::Instance& instance,
                  const vk::PhysicalDevice& physical_device,
                  const vk::Queue& queue,
                  uint32_t queue_family_index,
                  const vk::Format swapchain_format)
-    : device(device) {
+    : descriptor_pool(nullptr) {
     constexpr uint32_t POOL_SIZE = 100;
     vk::DescriptorPoolSize pool_sizes[] = {{vk::DescriptorType::eSampler, POOL_SIZE},
                                            {vk::DescriptorType::eCombinedImageSampler, POOL_SIZE},
@@ -33,8 +33,10 @@ Context::Context(SDL_Window* window,
                                            {vk::DescriptorType::eStorageBufferDynamic, POOL_SIZE},
                                            {vk::DescriptorType::eInputAttachment, POOL_SIZE}};
 
-    vk::DescriptorPoolCreateInfo pool_create_info{
-        .maxSets = POOL_SIZE, .poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes)), .pPoolSizes = pool_sizes};
+    vk::DescriptorPoolCreateInfo pool_create_info{.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+                                                  .maxSets = POOL_SIZE,
+                                                  .poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes)),
+                                                  .pPoolSizes = pool_sizes};
 
     descriptor_pool = device.createDescriptorPool(pool_create_info);
 
@@ -51,10 +53,10 @@ Context::Context(SDL_Window* window,
     ImGui_ImplVulkan_InitInfo init_info{};
     init_info.Instance = instance;
     init_info.PhysicalDevice = physical_device;
-    init_info.Device = device;
+    init_info.Device = *device;
     init_info.QueueFamily = queue_family_index;
     init_info.Queue = queue;
-    init_info.DescriptorPool = descriptor_pool;
+    init_info.DescriptorPool = *descriptor_pool;
     init_info.MinImageCount = 3;
     init_info.ImageCount = 3;
 
@@ -105,6 +107,5 @@ Context::~Context() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
-    device.destroyDescriptorPool(descriptor_pool);
 }
 }  // namespace jengine::renderer::imgui

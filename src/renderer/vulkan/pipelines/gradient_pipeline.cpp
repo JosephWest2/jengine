@@ -8,7 +8,7 @@ namespace jengine::renderer::vulkan::pipelines {
 
 GradientPipeline::GradientPipeline(const vk::raii::Device& device, const vk::PipelineLayout& pipeline_layout)
     : pipeline(nullptr) {
-    vk::raii::ShaderModule gradient_shader_module = LoadShaderModule("shaders/gradient.comp.spv", device);
+    vk::raii::ShaderModule gradient_shader_module = LoadShaderModule("shaders/gradient_color.comp.spv", device);
 
     vk::PipelineShaderStageCreateInfo gradient_pipeline_shader_stage_create_info{
         .stage = vk::ShaderStageFlagBits::eCompute,

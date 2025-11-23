@@ -69,15 +69,14 @@ void CopyImageBlit(const vk::CommandBuffer& command_buffer,
     command_buffer.blitImage2(&blit_image_info);
 }
 AllocatedImage::~AllocatedImage() {
-    device.destroyImageView(image_view);
     vmaDestroyImage(allocator, image, allocation);
 }
 AllocatedImage::AllocatedImage(const vk::Extent3D& extent,
                                const vk::Format& format,
                                const vk::ImageUsageFlags& usage_flags,
-                               const vk::Device& device,
+                               const vk::raii::Device& device,
                                const VmaAllocator& allocator)
-    : extent(extent), format(format), device(device), allocator(allocator) {
+    : image_view(nullptr), extent(extent), format(format), allocator(allocator) {
     vk::ImageCreateInfo image_create_info = init::ImageCreateInfo(format, usage_flags, extent);
     VmaAllocationCreateInfo allocation_create_info = {};
     allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
