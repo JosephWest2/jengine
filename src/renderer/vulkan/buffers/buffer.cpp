@@ -5,10 +5,10 @@
 
 namespace jengine::renderer::vulkan::buffers {
 
-Buffer::Buffer(size_t size,
-               vk::BufferUsageFlags usage_flags,
-               VmaMemoryUsage memory_usage,
-               const VmaAllocator allocator)
+AllocatedBuffer::AllocatedBuffer(size_t size,
+                                 vk::BufferUsageFlags usage_flags,
+                                 VmaMemoryUsage memory_usage,
+                                 const VmaAllocator allocator)
     : allocator(allocator) {
     vk::BufferCreateInfo buffer_create_info{
         .size = size,
@@ -25,5 +25,5 @@ Buffer::Buffer(size_t size,
     vmaCreateBuffer(
         allocator, &vk_buffer_create_info, &allocation_create_info, &buffer_result, &allocation, &allocation_info);
 };
-Buffer::~Buffer() { vmaDestroyBuffer(allocator, buffer, allocation); }
+AllocatedBuffer::~AllocatedBuffer() { vmaDestroyBuffer(allocator, buffer, allocation); }
 }  // namespace jengine::renderer::vulkan::buffers

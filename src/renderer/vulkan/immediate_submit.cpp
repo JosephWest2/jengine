@@ -21,7 +21,7 @@ ImmediateSubmit::ImmediateSubmit(const vk::raii::Device& device, uint32_t graphi
 }
 void ImmediateSubmit::Submit(const vk::Device& device,
                              const vk::Queue& queue,
-                             std::function<void(vk::CommandBuffer&)>&& function) {
+                             std::function<void(const vk::CommandBuffer&)>&& function) const {
     if (device.waitForFences(1, &(*fence), true, TIMEOUT_ONE_SECOND) != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to wait for immediate submit fence");
     }

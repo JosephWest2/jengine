@@ -14,7 +14,8 @@ Manager::Manager(const vk::raii::Device& device,
     : shared_compute_pipeline_layout(device, draw_image_descriptor_layout),
       gradient_pipeline(device, shared_compute_pipeline_layout.GetPipelineLayout()),
       sky_pipeline(device, shared_compute_pipeline_layout.GetPipelineLayout()),
-      triangle_pipeline(device, draw_image_format) {}
+      triangle_pipeline(device, draw_image_format),
+      mesh_pipeline(device, draw_image_format) {}
 
 const vk::Pipeline& Manager::GetSelectedSharedComputePipeline() const {
     switch (selected_shared_compute_pipeline) {

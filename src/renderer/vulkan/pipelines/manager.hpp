@@ -3,6 +3,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "renderer/vulkan/pipelines/gradient_pipeline.hpp"
+#include "renderer/vulkan/pipelines/mesh_pipeline.hpp"
 #include "renderer/vulkan/pipelines/shared_compute_pipeline_layout.hpp"
 #include "renderer/vulkan/pipelines/sky_pipeline.hpp"
 #include "renderer/vulkan/pipelines/triangle_pipeline.hpp"
@@ -23,6 +24,7 @@ class Manager {
     const vk::Pipeline& GetSkyPipeline() const { return sky_pipeline.GetPipeline(); }
     const vk::Pipeline& GetTrianglePipeline() const { return triangle_pipeline.GetPipeline(); }
     const vk::Pipeline& GetSelectedSharedComputePipeline() const;
+    const vk::Pipeline& GetMeshPipeline() const { return mesh_pipeline.GetPipeline(); }
     void SetSelectedSharedComputePipeline(SelectedSharedComputePipeline pipeline) {
         selected_shared_compute_pipeline = pipeline;
     }
@@ -37,5 +39,6 @@ class Manager {
     GradientPipeline gradient_pipeline;
     SkyPipeline sky_pipeline;
     TrianglePipeline triangle_pipeline;
+    MeshPipeline mesh_pipeline;
 };
 }  // namespace jengine::renderer::vulkan::pipelines
