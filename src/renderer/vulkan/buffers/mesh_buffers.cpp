@@ -18,7 +18,7 @@ MeshBuffers::MeshBuffers(const std::span<const uint32_t> indices,
                    VMA_MEMORY_USAGE_GPU_ONLY,
                    allocator),
       vertex_buffer(vertices.size() * sizeof(Vertex),
-                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress,
                     VMA_MEMORY_USAGE_GPU_ONLY,
                     allocator) {
     UploadMeshData(vertices, indices, allocator, immediate_submit, device, mesh_upload_queue);
@@ -33,6 +33,24 @@ void MeshBuffers::UploadMeshData(const std::span<const Vertex> vertices,
                                    vk::BufferUsageFlagBits::eTransferSrc,
                                    VMA_MEMORY_USAGE_CPU_ONLY,
                                    allocator);
+    const size_t verticies_size = vertices.size() * sizeof(Vertex);
+    const size_t indices_size = indices.size() * sizeof(uint32_t);
+
+    if (verticies_size > vertex_buffer.GetSize()) {
+        vertex_buffer = AllocatedBuffer(verticies_size,
+                                        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                                        VMA_MEMORY_USAGE_GPU_ONLY,
+                                        allocator);
+    }
+    if (indices_size > index_buffer.GetSize()) {
+        index_buffer = AllocatedBuffer(indices_size,
+                                       vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+                                       VMA_MEMORY_USAGE_GPU_ONLY,
+                                       allocator);
+    }
+    vertex_buffer_address =
+        device.getBufferAddress(vk::BufferDeviceAddressInfo{.buffer = vertex_buffer.GetBuffer()});
+
     void* data = staging_buffer.GetMappedData();
     memcpy(data, vertices.data(), vertex_buffer.GetSize());
     memcpy((char*)data + vertex_buffer.GetSize(), indices.data(), index_buffer.GetSize());

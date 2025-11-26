@@ -20,6 +20,6 @@ class ImmediateSubmit {
 
     vk::raii::CommandPool command_pool;
     vk::raii::Fence fence;
-    vk::CommandBuffer command_buffer;
+    vk::raii::CommandBuffer command_buffer;
 };
 }  // namespace jengine::renderer::vulkan

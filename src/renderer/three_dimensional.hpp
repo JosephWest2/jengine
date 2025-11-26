@@ -9,6 +9,7 @@
 #include "SDL3/SDL_video.h"
 #include "renderer/base.hpp"
 #include "renderer/imgui/context.hpp"
+#include "renderer/vulkan/buffers/mesh_buffers.hpp"
 #include "renderer/vulkan/debug.hpp"
 #include "renderer/vulkan/descriptors/manager.hpp"
 #include "renderer/vulkan/device.hpp"
@@ -64,6 +65,8 @@ class ThreeDimensional : public Base {
     vulkan::descriptors::Manager descriptor_manager;
 
     vulkan::pipelines::Manager pipeline_manager;
+
+    vulkan::buffers::MeshBuffers mesh_buffers;
 
     void ImmediateSubmit(std::function<void(vk::CommandBuffer command_buffer)>&& function);
 

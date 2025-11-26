@@ -11,6 +11,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "imgui.h"
+#include "renderer/vulkan/buffers/mesh_buffers.hpp"
 #include "renderer/vulkan/debug.hpp"
 #include "renderer/vulkan/frame_in_flight_data.hpp"
 #include "renderer/vulkan/image.hpp"
@@ -56,7 +57,13 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, std::string_view app_name
       descriptor_manager(device.GetDevice(), draw_image.GetImageView()),
       pipeline_manager(device.GetDevice(),
                        draw_image.GetFormat(),
-                       descriptor_manager.GetDrawImageDescriptorLayoutPtr()) {}
+                       descriptor_manager.GetDrawImageDescriptorLayoutPtr()),
+      mesh_buffers(vulkan::buffers::test_indices,
+                   vulkan::buffers::test_vertices,
+                   allocator.GetAllocator(),
+                   immediate_submit,
+                   device.GetDeviceHandle(),
+                   graphics_queue.GetQueue()) {}
 
 ThreeDimensional::~ThreeDimensional() { device.GetDevice().waitIdle(); }
 
@@ -204,9 +211,8 @@ void ThreeDimensional::DrawBackground(vk::CommandBuffer command_buffer) {
                                  0,
                                  vk::ArrayProxy<const glm::vec4>{push_constants_vec});
 
-    command_buffer.dispatch((uint32_t)std::ceil((float)draw_image.GetExtent().width / 16.f),
-                            (uint32_t)std::ceil((float)draw_image.GetExtent().height / 16.f),
-                            1);
+    command_buffer.dispatch(
+        std::ceil(draw_image.GetExtent().width / 16.f), std::ceil(draw_image.GetExtent().height / 16.f), 1);
 }
 
 vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {
@@ -242,6 +248,18 @@ void ThreeDimensional::DrawGeometry(vk::CommandBuffer command_buffer) {
     command_buffer.setScissor(0, 1, &scissor);
 
     command_buffer.draw(3, 1, 0, 0);
+
+    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_manager.GetMeshPipeline());
+
+    vulkan::buffers::MeshDrawPushConstants push_constants{
+        .world_matrix = glm::mat4(1.0f),
+        .vertex_buffer_address = mesh_buffers.GetVertexBufferAddress(),
+    };
+    command_buffer.pushConstants(
+        pipeline_manager.GetMeshPipelineLayout(), vk::ShaderStageFlagBits::eVertex, 0, sizeof(push_constants), &push_constants);
+    command_buffer.bindIndexBuffer(mesh_buffers.GetIndexBuffer().GetBuffer(), 0, vk::IndexType::eUint32);
+
+    command_buffer.drawIndexed(mesh_buffers.GetIndexBuffer().GetSize() / sizeof(uint32_t), 1, 0, 0, 0);
 
     command_buffer.endRendering();
 }

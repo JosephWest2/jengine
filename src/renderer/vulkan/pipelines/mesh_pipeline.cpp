@@ -5,20 +5,20 @@
 #include "renderer/vulkan/pipelines/load_shader_module.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
-MeshPipeline::MeshPipeline(const vk::raii::Device& device, const vk::Format& draw_image_format) : pipeline(nullptr) {
+MeshPipeline::MeshPipeline(const vk::raii::Device& device, const vk::Format& draw_image_format) : pipeline_layout(nullptr), pipeline(nullptr) {
     auto fragment_shader = LoadShaderModule("shaders/colored_triangle.frag.spv", device);
     auto vertex_shader = LoadShaderModule("shaders/colored_triangle_mesh.vert.spv", device);
 
     vk::PushConstantRange push_constant_range{
         .stageFlags = vk::ShaderStageFlagBits::eVertex,
         .offset = 0,
-        .size = sizeof(buffers::MeshBuffers::DrawPushConstants),
+        .size = sizeof(buffers::MeshDrawPushConstants),
     };
     vk::PipelineLayoutCreateInfo pipeline_layout_create_info{
         .pushConstantRangeCount = 1,
         .pPushConstantRanges = &push_constant_range,
     };
-    auto pipeline_layout = device.createPipelineLayout(pipeline_layout_create_info);
+    pipeline_layout = device.createPipelineLayout(pipeline_layout_create_info);
 
     GraphicsPipelineBuilder pipeline_builder{};
     pipeline_builder.pipeline_layout = pipeline_layout;

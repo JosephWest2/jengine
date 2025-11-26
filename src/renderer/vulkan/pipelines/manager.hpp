@@ -25,6 +25,7 @@ class Manager {
     const vk::Pipeline& GetTrianglePipeline() const { return triangle_pipeline.GetPipeline(); }
     const vk::Pipeline& GetSelectedSharedComputePipeline() const;
     const vk::Pipeline& GetMeshPipeline() const { return mesh_pipeline.GetPipeline(); }
+    const vk::PipelineLayout& GetMeshPipelineLayout() const { return mesh_pipeline.GetPipelineLayout(); }
     void SetSelectedSharedComputePipeline(SelectedSharedComputePipeline pipeline) {
         selected_shared_compute_pipeline = pipeline;
     }

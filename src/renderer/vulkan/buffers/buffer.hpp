@@ -11,6 +11,12 @@ class AllocatedBuffer {
                     const VmaAllocator allocator);
     ~AllocatedBuffer();
 
+    AllocatedBuffer(const AllocatedBuffer&) = delete;
+    AllocatedBuffer& operator=(const AllocatedBuffer&) = delete;
+
+    AllocatedBuffer(AllocatedBuffer&& other) noexcept;
+    AllocatedBuffer& operator=(AllocatedBuffer&& other) noexcept;
+
     const vk::Buffer& GetBuffer() const { return buffer; }
     void* GetMappedData() const { return allocation_info.pMappedData; }
     size_t GetSize() const { return size; }
@@ -22,6 +28,8 @@ class AllocatedBuffer {
     VmaAllocationInfo allocation_info;
 
     // held for destruction
-    const VmaAllocator allocator;
+    VmaAllocator allocator;
+
+    void Destroy();
 };
 }  // namespace jengine::renderer::vulkan::buffers

@@ -11,7 +11,8 @@ namespace jengine::renderer::vulkan {
 ImmediateSubmit::ImmediateSubmit(const vk::raii::Device& device, uint32_t graphics_queue_family_index)
     : command_pool(device.createCommandPool({.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
                                              .queueFamilyIndex = graphics_queue_family_index})),
-      fence(device.createFence({.flags = vk::FenceCreateFlagBits::eSignaled})) {
+      fence(device.createFence({.flags = vk::FenceCreateFlagBits::eSignaled})),
+      command_buffer(nullptr) {
     auto buffers = device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{
         .commandPool = command_pool,
         .level = vk::CommandBufferLevel::ePrimary,

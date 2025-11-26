@@ -9,7 +9,10 @@ class MeshPipeline {
 
     const vk::Pipeline& GetPipeline() const { return *pipeline; }
 
+    const vk::PipelineLayout& GetPipelineLayout() const { return *pipeline_layout; }
+
   private:
+    vk::raii::PipelineLayout pipeline_layout;
     vk::raii::Pipeline pipeline;
 };
 }  // namespace jengine::renderer::vulkan::pipelines
