@@ -71,4 +71,16 @@ vk::RenderingInfo RenderingInfo(vk::Extent2D render_extent,
         .pDepthAttachment = depth_attachment,
     };
 }
+vk::RenderingAttachmentInfo DepthAttachmentInfo(vk::ImageView image_view, vk::ImageLayout image_layout) {
+    return vk::RenderingAttachmentInfo{
+        .imageView = image_view,
+        .imageLayout = image_layout,
+        .loadOp = vk::AttachmentLoadOp::eLoad,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = vk::ClearValue{.depthStencil =
+                                         vk::ClearDepthStencilValue{
+                                             .depth = 0.f,
+                                         }},
+    };
+}
 }  // namespace jengine::renderer::vulkan::init

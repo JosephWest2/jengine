@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <optional>
+#include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan::init {
 
@@ -17,6 +18,7 @@ vk::ImageViewCreateInfo ImageViewCreateInfo(vk::Image image, vk::Format format, 
 vk::RenderingAttachmentInfo RenderingAttachmentInfo(vk::ImageView image_view,
                                                   std::optional<vk::ClearValue> clear_value,
                                                   vk::ImageLayout image_layout);
+vk::RenderingAttachmentInfo DepthAttachmentInfo(vk::ImageView image_view, vk::ImageLayout image_layout);
 vk::RenderingInfo RenderingInfo(vk::Extent2D render_extent,
                               vk::RenderingAttachmentInfo* color_attachment,
                               vk::RenderingAttachmentInfo* depth_attachment);

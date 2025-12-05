@@ -18,7 +18,8 @@ MeshBuffers::MeshBuffers(const std::span<const uint32_t> indices,
                    VMA_MEMORY_USAGE_GPU_ONLY,
                    allocator),
       vertex_buffer(vertices.size() * sizeof(Vertex),
-                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst |
+                        vk::BufferUsageFlagBits::eShaderDeviceAddress,
                     VMA_MEMORY_USAGE_GPU_ONLY,
                     allocator) {
     UploadMeshData(vertices, indices, allocator, immediate_submit, device, mesh_upload_queue);
@@ -38,7 +39,8 @@ void MeshBuffers::UploadMeshData(const std::span<const Vertex> vertices,
 
     if (verticies_size > vertex_buffer.GetSize()) {
         vertex_buffer = AllocatedBuffer(verticies_size,
-                                        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                                        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst |
+                                            vk::BufferUsageFlagBits::eShaderDeviceAddress,
                                         VMA_MEMORY_USAGE_GPU_ONLY,
                                         allocator);
     }
@@ -48,8 +50,7 @@ void MeshBuffers::UploadMeshData(const std::span<const Vertex> vertices,
                                        VMA_MEMORY_USAGE_GPU_ONLY,
                                        allocator);
     }
-    vertex_buffer_address =
-        device.getBufferAddress(vk::BufferDeviceAddressInfo{.buffer = vertex_buffer.GetBuffer()});
+    vertex_buffer_address = device.getBufferAddress(vk::BufferDeviceAddressInfo{.buffer = vertex_buffer.GetBuffer()});
 
     void* data = staging_buffer.GetMappedData();
     memcpy(data, vertices.data(), vertex_buffer.GetSize());
@@ -71,4 +72,16 @@ void MeshBuffers::UploadMeshData(const std::span<const Vertex> vertices,
         command_buffer.copyBuffer(staging_buffer.GetBuffer(), index_buffer.GetBuffer(), index_buffer_copy);
     });
 }
+MeshBuffers::MeshBuffers(MeshBuffers&& other)
+    : index_buffer(std::move(other.index_buffer)),
+      vertex_buffer(std::move(other.vertex_buffer)),
+      vertex_buffer_address(other.vertex_buffer_address) {
+    other.vertex_buffer_address = 0;
+};
+MeshBuffers& MeshBuffers::operator=(MeshBuffers&& other) {
+    index_buffer = std::move(other.index_buffer);
+    vertex_buffer = std::move(other.vertex_buffer);
+    other.vertex_buffer_address = 0;
+    return *this;
+};
 }  // namespace jengine::renderer::vulkan::buffers

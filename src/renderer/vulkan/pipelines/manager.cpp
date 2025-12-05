@@ -10,12 +10,13 @@ namespace jengine::renderer::vulkan::pipelines {
 
 Manager::Manager(const vk::raii::Device& device,
                  vk::Format draw_image_format,
+                 vk::Format depth_image_format,
                  const vk::DescriptorSetLayout* draw_image_descriptor_layout)
     : shared_compute_pipeline_layout(device, draw_image_descriptor_layout),
       gradient_pipeline(device, shared_compute_pipeline_layout.GetPipelineLayout()),
       sky_pipeline(device, shared_compute_pipeline_layout.GetPipelineLayout()),
-      triangle_pipeline(device, draw_image_format),
-      mesh_pipeline(device, draw_image_format) {}
+      triangle_pipeline(device, draw_image_format, depth_image_format),
+      mesh_pipeline(device, draw_image_format, depth_image_format) {}
 
 const vk::Pipeline& Manager::GetSelectedSharedComputePipeline() const {
     switch (selected_shared_compute_pipeline) {

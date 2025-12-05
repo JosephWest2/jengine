@@ -23,7 +23,7 @@ layout(push_constant) uniform constants {
 
 void main() {
     Vertex vertex = pushConstants.vertexBuffer.vertices[gl_VertexIndex];
-    gl_Position = pushConstants.renderMatrix * vec4(vertex.position, 1.0);
+    gl_Position = pushConstants.renderMatrix * vec4(vertex.position, 1.0f);
     outColor = vertex.color.xyz;
     outUV = vec2(vertex.uvX, vertex.uvY);
 }

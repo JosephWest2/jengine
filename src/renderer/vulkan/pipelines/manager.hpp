@@ -17,6 +17,7 @@ class Manager {
     };
     Manager(const vk::raii::Device& device,
             vk::Format draw_image_format,
+            vk::Format depth_image_format,
             const vk::DescriptorSetLayout* draw_image_descriptor_layout);
 
     SharedComputePipelineLayout& GetSharedComputePipelineLayout() { return shared_compute_pipeline_layout; }

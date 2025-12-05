@@ -4,7 +4,8 @@
 #include "renderer/vulkan/pipelines/load_shader_module.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
-TrianglePipeline::TrianglePipeline(const vk::raii::Device& device, const vk::Format& draw_image_format)
+TrianglePipeline::TrianglePipeline(const vk::raii::Device& device, const vk::Format& draw_image_format,
+                                   const vk::Format& depth_image_format)
     : pipeline(nullptr) {
     vk::raii::ShaderModule fragment_shader = LoadShaderModule("shaders/colored_triangle.frag.spv", device);
     vk::raii::ShaderModule vertex_shader = LoadShaderModule("shaders/colored_triangle.vert.spv", device);
@@ -19,7 +20,7 @@ TrianglePipeline::TrianglePipeline(const vk::raii::Device& device, const vk::For
     pipeline_builder.SetCullMode(vk::CullModeFlagBits::eNone, vk::FrontFace::eClockwise);
     pipeline_builder.SetMultisampling(vk::SampleCountFlagBits::e1);
     pipeline_builder.SetColorAttachmentFormat(draw_image_format);
-    pipeline_builder.SetDepthFormat(vk::Format::eUndefined);
+    pipeline_builder.SetDepthFormat(depth_image_format);
     pipeline_builder.DisableBlending();
     pipeline_builder.DisableDepthTest();
     pipeline = pipeline_builder.Build(device);

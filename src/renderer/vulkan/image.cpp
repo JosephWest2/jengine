@@ -26,7 +26,7 @@ void TransitionImage(const vk::CommandBuffer& command_buffer,
         .image = image,
     };
 
-    vk::ImageAspectFlags aspect_mask = old_layout == vk::ImageLayout::eDepthReadOnlyOptimal
+    vk::ImageAspectFlags aspect_mask = new_layout == vk::ImageLayout::eDepthAttachmentOptimal
                                            ? vk::ImageAspectFlagBits::eDepth
                                            : vk::ImageAspectFlagBits::eColor;
     image_barrier.subresourceRange = init::ImageSubresourceRange(aspect_mask);
@@ -73,6 +73,7 @@ AllocatedImage::~AllocatedImage() {
 }
 AllocatedImage::AllocatedImage(const vk::Extent3D& extent,
                                const vk::Format& format,
+                               const vk::ImageAspectFlags& aspect_flags,
                                const vk::ImageUsageFlags& usage_flags,
                                const vk::raii::Device& device,
                                const VmaAllocator& allocator)
@@ -94,7 +95,7 @@ AllocatedImage::AllocatedImage(const vk::Extent3D& extent,
     image = result;
 
     vk::ImageViewCreateInfo image_view_create_info =
-        init::ImageViewCreateInfo(image, format, vk::ImageAspectFlagBits::eColor);
+        init::ImageViewCreateInfo(image, format, aspect_flags);
 
     image_view = device.createImageView(image_view_create_info);
 }

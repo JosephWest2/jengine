@@ -46,6 +46,10 @@ FetchContent_Declare(
     URL https://github.com/spnda/fastgltf/archive/refs/tags/v0.9.0.tar.gz
     URL_HASH SHA256=0bb564e127b14c22f062db50f89381dd2e0a20dbaf4987ca138a4ae8728712f9
 )
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+)
 
 FetchContent_MakeAvailable(
     sdl3
@@ -55,6 +59,7 @@ FetchContent_MakeAvailable(
     imgui
     glm
     fastgltf
+    stb
 )
 
 add_library(imgui_static STATIC
@@ -73,6 +78,9 @@ target_include_directories(imgui_static
     PUBLIC ${imgui_SOURCE_DIR}
     PUBLIC ${imgui_SOURCE_DIR}/backends
 )
+
+add_library(stb_impl STATIC stb_impl/stb_impl.cpp)
+target_include_directories(stb_impl PUBLIC ${stb_SOURCE_DIR})
 
 add_library(vma_impl STATIC vma_impl/vma_impl.cpp)
 
@@ -102,13 +110,16 @@ add_library(${PROJECT_NAME}
     src/renderer/vulkan/queue.cpp
     src/renderer/vulkan/frame_in_flight_data.cpp
     src/renderer/vulkan/debug.cpp
-    src/renderer/vulkan/buffers/buffer.cpp
     src/renderer/vulkan/buffers/mesh_buffers.cpp
+    src/renderer/vulkan/buffers/buffer.cpp
     src/renderer/vulkan/physical_device.cpp
-    src/renderer/vulkan/immediate_submit.cpp
     src/renderer/vulkan/initializers.cpp
+    src/renderer/vulkan/immediate_submit.cpp
     src/renderer/imgui/context.cpp
+    src/renderer/gltf/mesh_asset.cpp
+    src/renderer/gltf/load_meshes.cpp
     src/renderer/three_dimensional.cpp
+    src/renderer/camera.cpp
     src/engine.cpp
     src/window.cpp
     src/util/should_be_unreachable.cpp
@@ -126,11 +137,14 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC imgui_static
     PUBLIC glm::glm
     PUBLIC fastgltf::fastgltf
+    PUBLIC stb_impl
 )
 
 target_compile_definitions(${PROJECT_NAME} 
     PRIVATE VULKAN_HPP_NO_CONSTRUCTORS
     PRIVATE VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+    PRIVATE GLM_FORCE_DEPTH_ZERO_TO_ONE
+    PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE

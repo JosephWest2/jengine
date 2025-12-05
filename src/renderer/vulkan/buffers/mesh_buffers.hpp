@@ -17,24 +17,26 @@ struct Vertex {
     glm::vec4 color{};
 };
 
-constexpr std::array<Vertex, 4> test_vertices = {Vertex{
-                                                     .position = glm::vec3(0.5f, -0.5f, 0.0f),
-                                                     .color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-                                                 },
-                                                 Vertex{
-                                                     .position = glm::vec3(0.5f, 0.5f, 0.0f),
-                                                     .color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
-                                                 },
-                                                 Vertex{
-                                                     .position = glm::vec3(-0.5f, -0.5f, 0.0f),
-                                                     .color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
-                                                 },
-                                                 Vertex{
-                                                     .position = glm::vec3(-0.5f, 0.5f, 0.0f),
-                                                     .color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
-                                                 }};
+constexpr std::array<Vertex, 4> test_vertices = {
+    Vertex{
+        .position = glm::vec3(-0.5f, -0.5f, 0.0f),
+        .color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+    },
+    Vertex{
+        .position = glm::vec3(-0.5f, 0.5f, 0.0f),
+        .color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+    },
+    Vertex{
+        .position = glm::vec3(0.5f, 0.5f, 0.0f),
+        .color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+    },
+    Vertex{
+        .position = glm::vec3(0.5f, -0.5f, 0.0f),
+        .color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+    },
+};
 
-constexpr std::array<uint32_t, 6> test_indices = {0, 1, 2, 2, 1, 3};
+constexpr std::array<uint32_t, 6> test_indices = {0, 1, 2, 2, 3, 0};
 
 struct MeshDrawPushConstants {
     glm::mat4 world_matrix;
@@ -49,6 +51,11 @@ class MeshBuffers {
                 const ImmediateSubmit& immediate_submit,
                 const vk::Device& device,
                 const vk::Queue& mesh_upload_queue);
+
+    MeshBuffers(const MeshBuffers&) = delete;
+    MeshBuffers& operator=(const MeshBuffers&) = delete;
+    MeshBuffers(MeshBuffers&& other);
+    MeshBuffers& operator=(MeshBuffers&& other);
 
     // takes an allocator to allocate a staging buffer
     void UploadMeshData(const std::span<const Vertex> vertices,

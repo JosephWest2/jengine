@@ -11,6 +11,7 @@ class AllocatedImage {
   public:
     AllocatedImage(const vk::Extent3D& extent,
                    const vk::Format& format,
+                   const vk::ImageAspectFlags& aspect_flags,
                    const vk::ImageUsageFlags& usage_flags,
                    const vk::raii::Device& device,
                    const VmaAllocator& allocator);

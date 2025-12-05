@@ -1,6 +1,7 @@
 #include "graphics_pipeline_builder.hpp"
 
 #include <vulkan/vulkan_core.h>
+
 #include "vulkan/vulkan.hpp"
 
 namespace jengine::renderer::vulkan::pipelines {
@@ -45,7 +46,8 @@ vk::raii::Pipeline GraphicsPipelineBuilder::Build(const vk::raii::Device& device
 
     return device.createGraphicsPipeline(nullptr, pipeline_create_info);
 }
-void GraphicsPipelineBuilder::SetShaders(const vk::ShaderModule& vertex_shader, const vk::ShaderModule& fragment_shader) {
+void GraphicsPipelineBuilder::SetShaders(const vk::ShaderModule& vertex_shader,
+                                         const vk::ShaderModule& fragment_shader) {
     shader_stages.clear();
     shader_stages.push_back({.stage = vk::ShaderStageFlagBits::eVertex, .module = vertex_shader, .pName = "main"});
     shader_stages.push_back({.stage = vk::ShaderStageFlagBits::eFragment, .module = fragment_shader, .pName = "main"});
@@ -80,11 +82,22 @@ void GraphicsPipelineBuilder::SetColorAttachmentFormat(vk::Format attachment_for
     rendering_info.colorAttachmentCount = 1;
     rendering_info.pColorAttachmentFormats = &color_attachment_format;
 }
-void GraphicsPipelineBuilder::SetDepthFormat(vk::Format format) { rendering_info.depthAttachmentFormat = format; }
+void GraphicsPipelineBuilder::SetDepthFormat(vk::Format format) { rendering_info.setDepthAttachmentFormat(format); }
 void GraphicsPipelineBuilder::DisableDepthTest() {
     depth_stencil_info.depthTestEnable = VK_FALSE;
     depth_stencil_info.depthWriteEnable = VK_FALSE;
     depth_stencil_info.depthCompareOp = vk::CompareOp::eNever;
+    depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil_info.stencilTestEnable = VK_FALSE;
+    depth_stencil_info.front = vk::StencilOpState();
+    depth_stencil_info.back = vk::StencilOpState();
+    depth_stencil_info.minDepthBounds = 0.0f;
+    depth_stencil_info.maxDepthBounds = 1.0f;
+}
+void GraphicsPipelineBuilder::EnableDepthTest(bool enable_depth_write, vk::CompareOp depth_compare_op) {
+    depth_stencil_info.depthTestEnable = VK_TRUE;
+    depth_stencil_info.depthWriteEnable = enable_depth_write;
+    depth_stencil_info.depthCompareOp = depth_compare_op;
     depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
     depth_stencil_info.stencilTestEnable = VK_FALSE;
     depth_stencil_info.front = vk::StencilOpState();

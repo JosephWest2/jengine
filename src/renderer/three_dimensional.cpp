@@ -10,7 +10,13 @@
 #include <thread>
 #include <vulkan/vulkan_raii.hpp>
 
+#include "glm/ext/matrix_clip_space.hpp"
+#include "glm/ext/matrix_transform.hpp"
+#include "glm/fwd.hpp"
+#include "glm/gtx/transform.hpp"
+#include "glm/trigonometric.hpp"
 #include "imgui.h"
+#include "renderer/gltf/load_meshes.hpp"
 #include "renderer/vulkan/buffers/mesh_buffers.hpp"
 #include "renderer/vulkan/debug.hpp"
 #include "renderer/vulkan/frame_in_flight_data.hpp"
@@ -43,10 +49,17 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, std::string_view app_name
                 VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT),
       draw_image(vk::Extent3D{(uint32_t)GetWindowWidth(window), (uint32_t)GetWindowHeight(window), 1},
                  vk::Format::eR16G16B16A16Sfloat,
+                 vk::ImageAspectFlagBits::eColor,
                  vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferSrc |
                      vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment,
                  device.GetDevice(),
                  allocator.GetAllocator()),
+      depth_image(vk::Extent3D{(uint32_t)GetWindowWidth(window), (uint32_t)GetWindowHeight(window), 1},
+                  vk::Format::eD32Sfloat,
+                  vk::ImageAspectFlagBits::eDepth,
+                  vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                  device.GetDevice(),
+                  allocator.GetAllocator()),
       imgui_context(window,
                     device.GetDevice(),
                     instance.GetInstance(),
@@ -57,13 +70,16 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, std::string_view app_name
       descriptor_manager(device.GetDevice(), draw_image.GetImageView()),
       pipeline_manager(device.GetDevice(),
                        draw_image.GetFormat(),
+                       depth_image.GetFormat(),
                        descriptor_manager.GetDrawImageDescriptorLayoutPtr()),
       mesh_buffers(vulkan::buffers::test_indices,
                    vulkan::buffers::test_vertices,
                    allocator.GetAllocator(),
                    immediate_submit,
                    device.GetDeviceHandle(),
-                   graphics_queue.GetQueue()) {}
+                   graphics_queue.GetQueue()) {
+    LoadMeshAsset("../assets/basicmesh.glb");
+}
 
 ThreeDimensional::~ThreeDimensional() { device.GetDevice().waitIdle(); }
 
@@ -125,6 +141,8 @@ void ThreeDimensional::DrawFrame() {
     vulkan::TransitionImage(
         command_buffer, draw_image.GetImage(), vk::ImageLayout::eGeneral, vk::ImageLayout::eColorAttachmentOptimal);
 
+    vulkan::TransitionImage(
+        command_buffer, depth_image.GetImage(), vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthAttachmentOptimal);
     DrawGeometry(command_buffer);
 
     vulkan::TransitionImage(command_buffer,
@@ -222,12 +240,14 @@ vulkan::FrameInFlightData& ThreeDimensional::GetCurrentFrameInFlightData() {
 void ThreeDimensional::DrawGeometry(vk::CommandBuffer command_buffer) {
     vk::RenderingAttachmentInfo color_attachment = vulkan::init::RenderingAttachmentInfo(
         draw_image.GetImageView(), std::nullopt, vk::ImageLayout::eColorAttachmentOptimal);
+    vk::RenderingAttachmentInfo depth_attachment =
+        vulkan::init::DepthAttachmentInfo(depth_image.GetImageView(), vk::ImageLayout::eDepthAttachmentOptimal);
     vk::RenderingInfo rendering_info = vulkan::init::RenderingInfo(
-        {draw_image.GetExtent().width, draw_image.GetExtent().height}, &color_attachment, nullptr);
+        {draw_image.GetExtent().width, draw_image.GetExtent().height}, &color_attachment, &depth_attachment);
 
     command_buffer.beginRendering(rendering_info);
 
-    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_manager.GetTrianglePipeline());
+    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_manager.GetMeshPipeline());
 
     vk::Viewport viewport{
         .x = 0.0f,
@@ -247,20 +267,43 @@ void ThreeDimensional::DrawGeometry(vk::CommandBuffer command_buffer) {
 
     command_buffer.setScissor(0, 1, &scissor);
 
-    command_buffer.draw(3, 1, 0, 0);
+    // auto rotation = glm::rotate(glm::radians(180.f), glm::vec3(0.f, 1.f, 0.f));
+    auto translation = glm::translate(glm::vec3(0.f, 0.f, -3.f));
+    auto perspective = glm::perspective(glm::radians(90.f), 4.f / 3.f, 1000.f, 0.1f);
+    perspective[1][1] *= -1.f;
 
-    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_manager.GetMeshPipeline());
-
-    vulkan::buffers::MeshDrawPushConstants push_constants{
-        .world_matrix = glm::mat4(1.0f),
-        .vertex_buffer_address = mesh_buffers.GetVertexBufferAddress(),
+    vulkan::buffers::MeshDrawPushConstants push_constants {
+        .world_matrix = perspective * translation,
+        .vertex_buffer_address = loaded_mesh_assets[2].mesh_buffers.GetVertexBufferAddress(),
     };
-    command_buffer.pushConstants(
-        pipeline_manager.GetMeshPipelineLayout(), vk::ShaderStageFlagBits::eVertex, 0, sizeof(push_constants), &push_constants);
-    command_buffer.bindIndexBuffer(mesh_buffers.GetIndexBuffer().GetBuffer(), 0, vk::IndexType::eUint32);
 
-    command_buffer.drawIndexed(mesh_buffers.GetIndexBuffer().GetSize() / sizeof(uint32_t), 1, 0, 0, 0);
+    command_buffer.pushConstants(pipeline_manager.GetMeshPipelineLayout(),
+                                 vk::ShaderStageFlagBits::eVertex,
+                                 0,
+                                 sizeof(push_constants),
+                                 &push_constants);
+    command_buffer.bindIndexBuffer(
+        loaded_mesh_assets[2].mesh_buffers.GetIndexBuffer().GetBuffer(), 0, vk::IndexType::eUint32);
+
+    command_buffer.drawIndexed(
+        loaded_mesh_assets[2].surfaces[0].index_count, 1, loaded_mesh_assets[2].surfaces[0].start_index, 0, 0);
 
     command_buffer.endRendering();
+}
+void ThreeDimensional::LoadMeshAsset(std::string_view path) {
+    std::vector<gltf::MeshAsset> mesh_assets = gltf::LoadMeshes(path);
+    loaded_mesh_assets.reserve(loaded_mesh_assets.size() + mesh_assets.size());
+    for (const auto& mesh_asset : mesh_assets) {
+        loaded_mesh_assets.push_back(
+            GPULoadedMeshAsset{.name = mesh_asset.name,
+                               .surfaces = mesh_asset.surfaces,
+                               .mesh_buffers = vulkan::buffers::MeshBuffers(mesh_asset.indices,
+                                                                            mesh_asset.vertices,
+                                                                            allocator.GetAllocator(),
+                                                                            immediate_submit,
+                                                                            device.GetDeviceHandle(),
+                                                                            graphics_queue.GetQueue()),
+                               .instances = {}});
+    }
 }
 }  // namespace jengine::renderer

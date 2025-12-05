@@ -14,7 +14,7 @@ class MemoryAllocator {
                     VmaAllocatorCreateFlags flags);
     ~MemoryAllocator();
 
-    VmaAllocator& GetAllocator() { return allocator; }
+    const VmaAllocator& GetAllocator() { return allocator; }
 
   private:
     VmaAllocator allocator;

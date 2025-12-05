@@ -9,7 +9,7 @@
 namespace jengine {
 
 std::unordered_map<WindowType, SDL_WindowFlags> window_flags = {
-    {WindowType::VULKAN, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN}};
+    {WindowType::VULKAN, SDL_WINDOW_VULKAN}};
 
 Window::Window(const char* title, int width, int height, WindowType window_type, bool constant_redraw)
     : constant_redraw(constant_redraw) {

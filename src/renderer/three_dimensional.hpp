@@ -7,8 +7,12 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "SDL3/SDL_video.h"
+#include "absl/container/flat_hash_map.h"
+#include "glm/fwd.hpp"
 #include "renderer/base.hpp"
+#include "renderer/camera.hpp"
 #include "renderer/imgui/context.hpp"
+#include "renderer/loaded_mesh_asset.hpp"
 #include "renderer/vulkan/buffers/mesh_buffers.hpp"
 #include "renderer/vulkan/debug.hpp"
 #include "renderer/vulkan/descriptors/manager.hpp"
@@ -36,6 +40,8 @@ class ThreeDimensional : public Base {
 
     void DrawFrame() override;
 
+    void LoadMeshAsset(std::string_view path);
+
   private:
     uint64_t frame_counter{0};
 
@@ -59,6 +65,7 @@ class ThreeDimensional : public Base {
     vulkan::MemoryAllocator allocator;
 
     vulkan::AllocatedImage draw_image;
+    vulkan::AllocatedImage depth_image;
 
     imgui::Context imgui_context;
 
@@ -67,6 +74,12 @@ class ThreeDimensional : public Base {
     vulkan::pipelines::Manager pipeline_manager;
 
     vulkan::buffers::MeshBuffers mesh_buffers;
+
+    std::vector<GPULoadedMeshAsset> loaded_mesh_assets;
+
+    Camera camera{};
+
+    absl::flat_hash_map<std::string_view, glm::mat4> mesh_instances;
 
     void ImmediateSubmit(std::function<void(vk::CommandBuffer command_buffer)>&& function);
 
