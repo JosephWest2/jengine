@@ -35,7 +35,7 @@ MeshPipeline::MeshPipeline(const vk::raii::Device& device,
     pipeline_builder.SetColorAttachmentFormat(draw_image_format);
     std::println("DEPTH IMAGE FORMAT {}", depth_image_format == vk::Format::eD32Sfloat);
     pipeline_builder.SetDepthFormat(depth_image_format);
-    pipeline_builder.DisableBlending();
+    pipeline_builder.EnableBlendingAdditive();
     pipeline_builder.EnableDepthTest(true, vk::CompareOp::eGreaterOrEqual);
     pipeline = pipeline_builder.Build(device);
 }

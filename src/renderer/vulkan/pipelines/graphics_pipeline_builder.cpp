@@ -105,4 +105,26 @@ void GraphicsPipelineBuilder::EnableDepthTest(bool enable_depth_write, vk::Compa
     depth_stencil_info.minDepthBounds = 0.0f;
     depth_stencil_info.maxDepthBounds = 1.0f;
 }
+void GraphicsPipelineBuilder::EnableBlendingAdditive() {
+    color_blend_attachment_state.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+                                                  vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    color_blend_attachment_state.blendEnable = VK_TRUE;
+    color_blend_attachment_state.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    color_blend_attachment_state.dstColorBlendFactor = vk::BlendFactor::eOne;
+    color_blend_attachment_state.colorBlendOp = vk::BlendOp::eAdd;
+    color_blend_attachment_state.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    color_blend_attachment_state.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    color_blend_attachment_state.alphaBlendOp = vk::BlendOp::eAdd;
+}
+void GraphicsPipelineBuilder::EnableBlendingAlpha() {
+    color_blend_attachment_state.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+                                                  vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    color_blend_attachment_state.blendEnable = VK_TRUE;
+    color_blend_attachment_state.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    color_blend_attachment_state.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+    color_blend_attachment_state.colorBlendOp = vk::BlendOp::eAdd;
+    color_blend_attachment_state.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    color_blend_attachment_state.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    color_blend_attachment_state.alphaBlendOp = vk::BlendOp::eAdd;
+}
 }  // namespace jengine::renderer::vulkan::pipelines

@@ -22,11 +22,19 @@ class Swapchain {
     const vk::Format* GetSwapchainImageFormatPtr() const { return &surface_format.format; }
     const vk::SwapchainKHR& GetSwapchain() const { return *swapchain; }
     const vk::SwapchainKHR* GetSwapchainPtr() const { return &*swapchain; }
-    const vk::Semaphore& GetImageRenderFinishedSemaphore(size_t index) const { return *image_render_finished_semaphores[index]; }
+    const vk::Semaphore& GetImageRenderFinishedSemaphore(size_t index) const {
+        return *image_render_finished_semaphores[index];
+    }
     const vk::ImageView& GetImageView(size_t index) const { return *image_views[index]; }
     size_t GetImageCount() const { return images.size(); }
     const vk::Image& GetImage(size_t index) const { return images[index]; }
     vk::Extent2D GetExtent() const { return extent; }
+
+    void Rebuild(uint width,
+                 uint height,
+                 vulkan::PhysicalDevice& physical_device,
+                 const vk::raii::Device& device,
+                 const vk::SurfaceKHR& surface);
 
   private:
     vk::SurfaceFormatKHR surface_format{};

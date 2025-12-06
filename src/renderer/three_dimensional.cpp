@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <print>
 #include <thread>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -24,6 +25,7 @@
 #include "renderer/vulkan/initializers.hpp"
 #include "renderer/vulkan/instance.hpp"
 #include "renderer/vulkan/physical_device.hpp"
+#include "renderer/vulkan/swapchain.hpp"
 #include "vulkan/vulkan.hpp"
 #include "window.hpp"
 
@@ -77,38 +79,47 @@ ThreeDimensional::ThreeDimensional(SDL_Window* window, std::string_view app_name
                    allocator.GetAllocator(),
                    immediate_submit,
                    device.GetDeviceHandle(),
-                   graphics_queue.GetQueue()) {
+                   graphics_queue.GetQueue()),
+      camera(75.f, (float)GetWindowWidth(window) / (float)GetWindowHeight(window)) {
     LoadMeshAsset("../assets/basicmesh.glb");
 }
 
 ThreeDimensional::~ThreeDimensional() { device.GetDevice().waitIdle(); }
 
 void ThreeDimensional::DrawFrame() {
-    std::cout << "Frame " << frame_counter << std::endl;
+    std::println("Frame {}, rate: {}", frame_counter, FrameRate());
+    last_frame_start_time = std::chrono::steady_clock::now();
+
+    if (resize_requested) {
+        return;
+    }
 
     // imgui setup
     imgui_context.NewFrame([this]() {
-        auto pipeline_name = pipeline_manager.GetSelectedSharedComputePipelineName();
+        if (ImGui::Begin("background")) {
+            auto pipeline_name = pipeline_manager.GetSelectedSharedComputePipelineName();
 
-        ImGui::Text("Selected pipeline: %s", pipeline_name.data());
+            ImGui::Text("Selected pipeline: %s", pipeline_name.data());
 
-        if (ImGui::Button("Select Sky")) {
-            pipeline_manager.SetSelectedSharedComputePipeline(
-                vulkan::pipelines::Manager::SelectedSharedComputePipeline::SKY);
+            if (ImGui::Button("Select Sky")) {
+                pipeline_manager.SetSelectedSharedComputePipeline(
+                    vulkan::pipelines::Manager::SelectedSharedComputePipeline::SKY);
+            }
+            if (ImGui::Button("Select Gradient")) {
+                pipeline_manager.SetSelectedSharedComputePipeline(
+                    vulkan::pipelines::Manager::SelectedSharedComputePipeline::GRADIENT);
+            }
+
+            ImGui::InputFloat4("ComputePushConstant1",
+                               (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data1);
+            ImGui::InputFloat4("ComputePushConstant2",
+                               (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data2);
+            ImGui::InputFloat4("ComputePushConstant3",
+                               (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data3);
+            ImGui::InputFloat4("ComputePushConstant4",
+                               (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data4);
         }
-        if (ImGui::Button("Select Gradient")) {
-            pipeline_manager.SetSelectedSharedComputePipeline(
-                vulkan::pipelines::Manager::SelectedSharedComputePipeline::GRADIENT);
-        }
-
-        ImGui::InputFloat4("ComputePushConstant1",
-                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data1);
-        ImGui::InputFloat4("ComputePushConstant2",
-                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data2);
-        ImGui::InputFloat4("ComputePushConstant3",
-                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data3);
-        ImGui::InputFloat4("ComputePushConstant4",
-                           (float*)&pipeline_manager.GetSharedComputePipelineLayout().GetPushConstants().data4);
+        ImGui::End();
     });
 
     device.WaitIdle();
@@ -121,6 +132,10 @@ void ThreeDimensional::DrawFrame() {
         .semaphore = GetCurrentFrameInFlightData().GetImageAvailableSemaphore(),
         .deviceMask = 1,
     });
+    if (result.result == vk::Result::eErrorOutOfDateKHR) {
+        resize_requested = true;
+        return;
+    }
     if (!result.has_value()) {
         throw std::runtime_error("Failed to acquire next image");
     }
@@ -190,8 +205,14 @@ void ThreeDimensional::DrawFrame() {
         .pImageIndices = &swapchain_image_index,
     };
 
-    if (graphics_queue.GetQueue().presentKHR(present_info) != vk::Result::eSuccess) {
-        throw std::runtime_error("Failed to present queue");
+    {
+        auto result = graphics_queue.GetQueue().presentKHR(present_info);
+        if (result == vk::Result::eErrorOutOfDateKHR) {
+            resize_requested = true;
+            return;
+        } else if (result != vk::Result::eSuccess) {
+            throw std::runtime_error("Failed to present queue");
+        }
     }
 
     frame_counter++;
@@ -262,18 +283,18 @@ void ThreeDimensional::DrawGeometry(vk::CommandBuffer command_buffer) {
 
     vk::Rect2D scissor{
         .offset = {0, 0},
-        .extent = {draw_image.GetExtent().width, draw_image.GetExtent().height},
+        .extent = {static_cast<uint32_t>(viewport.width), static_cast<uint32_t>(viewport.height)},
     };
 
     command_buffer.setScissor(0, 1, &scissor);
 
     // auto rotation = glm::rotate(glm::radians(180.f), glm::vec3(0.f, 1.f, 0.f));
-    auto translation = glm::translate(glm::vec3(0.f, 0.f, -3.f));
-    auto perspective = glm::perspective(glm::radians(90.f), 4.f / 3.f, 1000.f, 0.1f);
-    perspective[1][1] *= -1.f;
+    // auto translation = glm::translate(glm::vec3(0.f, 0.f, -3.f));
+    // auto perspective = glm::perspective(glm::radians(90.f), 4.f / 3.f, 1000.f, 0.1f);
+    // perspective[1][1] *= -1.f;
 
-    vulkan::buffers::MeshDrawPushConstants push_constants {
-        .world_matrix = perspective * translation,
+    vulkan::buffers::MeshDrawPushConstants push_constants{
+        .world_matrix = camera.ProjectionMatrix() * camera.ViewMatrix(),
         .vertex_buffer_address = loaded_mesh_assets[2].mesh_buffers.GetVertexBufferAddress(),
     };
 
@@ -305,5 +326,11 @@ void ThreeDimensional::LoadMeshAsset(std::string_view path) {
                                                                             graphics_queue.GetQueue()),
                                .instances = {}});
     }
+}
+void ThreeDimensional::HandleResize(uint32_t new_width, uint32_t new_height) {
+    std::println("swapchain resized");
+    camera.SetAspectRatio(static_cast<float>(new_width) / static_cast<float>(new_height));
+    swapchain.Rebuild(new_width, new_height, physical_device, device.GetDevice(), surface.GetSurface());
+    resize_requested = false;
 }
 }  // namespace jengine::renderer

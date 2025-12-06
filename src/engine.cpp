@@ -4,6 +4,7 @@
 #include <cassert>
 #include <format>
 #include <iostream>
+#include <print>
 #include <stdexcept>
 
 #include "SDL3/SDL_events.h"
@@ -37,6 +38,12 @@ void Engine::HandleEvent(SDL_Event& event) {
         case SDL_EVENT_WINDOW_MINIMIZED:
             CallOnWindowByWindowID(event.window, &Window::HandleWindowMinimized);
             break;
+        case SDL_EVENT_WINDOW_RESTORED:
+            CallOnWindowByWindowID(event.window, &Window::HandleWindowRestored);
+            break;
+        case SDL_EVENT_WINDOW_RESIZED:
+            CallOnWindowByWindowID(event.window, &Window::HandleWindowResized);
+            break;
 
         default:
             break;
@@ -46,7 +53,7 @@ void Engine::HandleEvent(SDL_Event& event) {
 
 Engine::Engine(bool headless) {
     if (sdl_initialized) {
-        std::cout << "Warning: SDL already initialized, multiple instances of engine created" << std::endl;
+        std::println("Warning: SDL already initialized, multiple instances of engine created");
     }
     auto init_flags = headless ? SDL_INIT_EVENTS : SDL_INIT_VIDEO | SDL_INIT_AUDIO;
     if (!SDL_Init(init_flags)) {

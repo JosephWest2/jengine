@@ -1,12 +1,12 @@
 #pragma once
 
 #include <utility>
+
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_video.h"
 #include "renderer/base.hpp"
 
 namespace jengine {
-
 
 // returns {width, height}
 std::pair<int, int> GetWindowSize(SDL_Window* window);
@@ -38,9 +38,11 @@ class Window {
     renderer::Base* GetRenderer() const { return renderer; }
 
     void HandleWindowMinimized(SDL_WindowEvent& event);
+    void HandleWindowRestored(SDL_WindowEvent& event);
+    void HandleWindowResized(SDL_WindowEvent& event);
 
   private:
-
+    bool should_render = true;
     renderer::Base* renderer{nullptr};
     SDL_Window* window{nullptr};
     bool constant_redraw{true};

@@ -111,4 +111,13 @@ vk::PresentModeKHR Swapchain::SelectPresentMode(vk::PresentModeKHR preferred,
     return vk::PresentModeKHR::eFifo;
 }
 
+void Swapchain::Rebuild(uint width,
+                        uint height,
+                        vulkan::PhysicalDevice& physical_device,
+                        const vk::raii::Device& device,
+                        const vk::SurfaceKHR& surface) {
+    device.waitIdle();
+    this->~Swapchain();
+    new (this) Swapchain(width, height, physical_device, device, surface);
+}
 }  // namespace jengine::renderer::vulkan

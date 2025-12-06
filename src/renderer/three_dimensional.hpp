@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
 
+#include <chrono>
 #include <functional>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -42,7 +43,16 @@ class ThreeDimensional : public Base {
 
     void LoadMeshAsset(std::string_view path);
 
+    void HandleResize(uint32_t new_width, uint32_t new_height) override;
+
+
   private:
+
+    float FrameRate() {
+        auto current_time = std::chrono::steady_clock::now();
+        auto elapsed = current_time - last_frame_start_time;
+        return 1000.f / std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+    }
     uint64_t frame_counter{0};
 
     static constexpr int FRAMES_IN_FLIGHT = 3;
@@ -77,7 +87,11 @@ class ThreeDimensional : public Base {
 
     std::vector<GPULoadedMeshAsset> loaded_mesh_assets;
 
-    Camera camera{};
+    Camera camera;
+
+    bool resize_requested = false;
+
+    std::chrono::time_point<std::chrono::steady_clock> last_frame_start_time = std::chrono::steady_clock::now();
 
     absl::flat_hash_map<std::string_view, glm::mat4> mesh_instances;
 
@@ -85,6 +99,7 @@ class ThreeDimensional : public Base {
 
     void DrawBackground(vk::CommandBuffer command_buffer);
     void DrawGeometry(vk::CommandBuffer command_buffer);
+
 
     vulkan::FrameInFlightData& GetCurrentFrameInFlightData();
 

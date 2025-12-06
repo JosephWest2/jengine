@@ -32,6 +32,8 @@ class GraphicsPipelineBuilder {
     void SetDepthFormat(vk::Format format);
     void EnableDepthTest(bool enable_depth_write, vk::CompareOp depth_compare_op);
     void DisableDepthTest();
+    void EnableBlendingAdditive();
+    void EnableBlendingAlpha();
     vk::raii::Pipeline Build(const vk::raii::Device& device);
 
   private:

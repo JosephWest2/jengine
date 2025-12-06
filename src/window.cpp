@@ -9,7 +9,7 @@
 namespace jengine {
 
 std::unordered_map<WindowType, SDL_WindowFlags> window_flags = {
-    {WindowType::VULKAN, SDL_WINDOW_VULKAN}};
+    {WindowType::VULKAN, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE}};
 
 Window::Window(const char* title, int width, int height, WindowType window_type, bool constant_redraw)
     : constant_redraw(constant_redraw) {
@@ -48,6 +48,9 @@ void Window::DrawFrame() {
     if (!renderer) {
         throw std::runtime_error("Renderer not set");
     }
+    if (!should_render) {
+        return;
+    }
     renderer->DrawFrame();
 }
 void Window::SetRenderer(renderer::Base* renderer) { this->renderer = renderer; }
@@ -66,5 +69,10 @@ std::pair<int, int> GetWindowSize(SDL_Window* window) {
     SDL_GetWindowSize(window, &width, &height);
     return {width, height};
 }
-void Window::HandleWindowMinimized(SDL_WindowEvent& event __attribute__((unused))) {}
+void Window::HandleWindowMinimized(SDL_WindowEvent& event __attribute__((unused))) { should_render = false; }
+void Window::HandleWindowRestored(SDL_WindowEvent& event __attribute__((unused))) { should_render = true; }
+void Window::HandleWindowResized(SDL_WindowEvent& event __attribute__((unused))) {
+    auto [width, height] = GetWindowSize(window);
+    renderer->HandleResize(width, height);
+}
 }  // namespace jengine
